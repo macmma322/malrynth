@@ -1,0 +1,28 @@
+[package]
+name = "malboot"
+description = "Malrynth Boot: the UEFI loader that loads and enters the Malrynth kernel."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish = false
+
+[[bin]]
+name = "malboot"
+path = "src/main.rs"
+test = false
+bench = false
+
+# `uefi` is the ONLY external dependency in the entire Malrynth tree, and it is confined to
+# the loader -- it is not linked into the kernel. Rationale, license and audit notes are
+# recorded in THIRD_PARTY.md. Hand-rolling UEFI protocol bindings was rejected: the risk of
+# a subtly wrong firmware structure definition greatly exceeds the risk of depending on a
+# maintained, widely used standards binding for code that stops running at ExitBootServices.
+[dependencies]
+uefi = { version = "0.39", default-features = false, features = [
+    "alloc",
+    "global_allocator",
+    "panic_handler",
+    "logger",
+] }
+malrynth-abi = { workspace = true }

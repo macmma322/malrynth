@@ -1,0 +1,12 @@
+[package]
+name = "malrynth-abi"
+description = "Malrynth boot handoff ABI: the contract between malboot and the kernel."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+publish = false
+
+# No dependencies, by policy. This crate is linked into privileged code on both sides of
+# the handoff; every dependency here would be a dependency of the kernel.
+[dependencies]

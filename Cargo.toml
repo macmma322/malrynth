@@ -1,0 +1,33 @@
+# Malrynth root workspace.
+#
+# Members build for DIFFERENT targets and are never all built at once:
+#   malrynth-abi     -> host (tested) and any target (shared handoff contract)
+#   malboot          -> x86_64-unknown-uefi
+#   malrynth-kernel  -> x86_64-unknown-none
+# `tools/build` invokes cargo per package with the correct --target.
+# Do not run bare `cargo build --workspace`; it has no single valid target.
+[workspace]
+resolver = "3"
+members = ["core/abi", "core/boot/uefi", "core/kernel"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.97.1"
+authors = ["Malrynth Project"]
+publish = false
+
+[workspace.dependencies]
+malrynth-abi = { path = "core/abi" }
+
+# Size and determinism matter more than compile time for shipped images.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+debug = true            # keep DWARF for symbolisation; stripped from the image, not the ELF
+overflow-checks = true  # arithmetic overflow is a bug in a kernel, not a wrap
+
+[profile.dev]
+panic = "abort"
