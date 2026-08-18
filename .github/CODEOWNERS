@@ -1,0 +1,44 @@
+# Malrynth code ownership.
+#
+# ADVISORY ONLY at present. Enforcement requires branch protection with required review,
+# which is unavailable for private repositories on GitHub Free (see
+# docs/operations/github-ownership.md). This file is written with a future-compatible layout
+# so that enabling enforcement is a settings change, not a rewrite.
+#
+# When an organisation exists, replace @macmma322 with team handles
+# (e.g. @malrynth/kernel) -- the paths below are already grouped for that.
+
+# Default owner for everything not matched below.
+*                                   @macmma322
+
+# --- Privileged code: highest review bar -------------------------------------
+# Everything under core/ runs with full authority or decides what does.
+/core/                              @macmma322
+/core/kernel/                       @macmma322
+/core/kernel/src/arch/              @macmma322
+/core/boot/                         @macmma322
+# The handoff ABI is a contract between two privileged components; changes here
+# can silently corrupt a kernel, so it is called out separately from core/.
+/core/abi/                          @macmma322
+
+# --- Governance: changes here change the rules themselves --------------------
+/docs/constitution/                 @macmma322
+/docs/adr/                          @macmma322
+/docs/security/                     @macmma322
+/docs/legal/                        @macmma322
+/GOVERNANCE.md                      @macmma322
+/SECURITY.md                        @macmma322
+/THIRD_PARTY.md                     @macmma322
+/THIRD_PARTY_POLICY.md              @macmma322
+
+# --- Supply chain and build integrity ----------------------------------------
+/.github/                           @macmma322
+/.github/workflows/                 @macmma322
+/tools/                             @macmma322
+/Cargo.lock                         @macmma322
+/rust-toolchain.toml                @macmma322
+/.cargo/                            @macmma322
+
+# --- CODEOWNERS protects itself ----------------------------------------------
+# Without this, anyone able to edit CODEOWNERS can remove every rule above.
+/.github/CODEOWNERS                 @macmma322

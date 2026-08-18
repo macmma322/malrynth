@@ -1,0 +1,95 @@
+name: CI
+
+# Runs the same checks as `tools/test`. Anything CI does must be reproducible locally,
+# and vice versa -- there is no CI-only magic (ADR-0001).
+#
+# COST: Actions minutes on private repositories draw from the account's free monthly
+# allowance. The default spending limit is zero, so exhausting the allowance causes
+# workflows to FAIL rather than to bill. `tools/test` is the authoritative local
+# equivalent and the fallback if the allowance runs out.
+#
+# Third-party actions are pinned by commit SHA, never by tag: tags are mutable, and a
+# compromised action repository can retag silently (docs/security/SUPPLY-CHAIN.md).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Superseded runs are cancelled so a burst of pushes cannot drain the allowance.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # A build failure must not be hidden behind an incremental-compilation artifact.
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  verify:
+    name: fmt, lint, test, boot
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # The toolchain and targets come from rust-toolchain.toml, which rustup honours
+      # automatically. No third-party toolchain action is used: it would be one more
+      # dependency in the build pipeline for something rustup already does.
+      - name: Show toolchain
+        run: |
+          rustup show
+          cargo --version
+          rustc --version
+
+      - name: Install targets
+        run: rustup target add x86_64-unknown-uefi x86_64-unknown-none
+
+      - name: Cache cargo
+        # actions/cache v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', 'rust-toolchain.toml') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: Scan for secrets
+        # GitHub push protection is unavailable for private repos on this plan, so this
+        # scan is the only automated secret control (docs/security/SECRETS-POLICY.md).
+        run: ./tools/scan-secrets
+
+      - name: Install QEMU and OVMF
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends qemu-system-x86 ovmf
+
+      - name: Doctor
+        run: ./tools/doctor
+
+      # Boots run under TCG here (no nested virtualisation on hosted runners), so they are
+      # slower than locally. Timing measured in CI is not representative and is never
+      # reported as a performance figure (docs/performance/BENCHMARK-METHODOLOGY.md).
+      - name: Verify
+        run: ./tools/test --boots 2
+
+      - name: Upload serial log on failure
+        if: failure()
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: serial-log
+          path: build/
+          retention-days: 7
