@@ -39,9 +39,18 @@ The full transitive set is recorded in `THIRD_PARTY.md`.
 
 Reproducible builds are the control that makes a compromised pipeline *detectable*: an
 independent rebuild that produces different bytes is evidence. Pinning the exact toolchain
-and lockfile is the prerequisite, and is done. Remaining work: eliminating embedded absolute
-paths (`--remap-path-prefix`), timestamps, and non-deterministic ordering. **Not yet
-verified — do not claim it.** Tracked for M5.
+and lockfile is the prerequisite, and is done.
+
+**Measured status (2026-08-19): builds are NOT reproducible across build directories.**
+Building the same commit at two different paths produced kernel images of 116,208 and
+116,280 bytes. The cause was identified rather than guessed: the build directory is embedded
+verbatim in the image's debug information, and the size delta equals the path-length
+difference. Verified with `strings` on both images.
+
+This is a real gap, not a theoretical one, and it means an independent rebuild currently
+cannot be used as evidence of pipeline integrity. Remediation is `--remap-path-prefix` (plus
+auditing timestamps and non-deterministic ordering), tracked for M5. Until then, **no
+reproducibility claim may be made.**
 
 ## Planned
 
