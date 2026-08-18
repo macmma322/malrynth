@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Malrynth pre-push hook. Installed by tools/bootstrap.
+#
+# `main` cannot be protected server-side: rulesets and branch protection are unavailable for
+# private repositories on GitHub Free. This hook is the only enforcement that exists, and it
+# is bypassable with --no-verify. See docs/operations/github-ownership.md for the ruleset to
+# apply the moment the plan or owner changes.
+set -Eeuo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [[ "${local_sha}" =~ ^0+$ ]] && {
+        echo "refusing to delete a remote branch via push" >&2; exit 1; }
+
+    if [[ "${remote_ref}" == "refs/heads/main" ]]; then
+        # Reject non-fast-forward pushes to main (i.e. history rewrites).
+        if [[ ! "${remote_sha}" =~ ^0+$ ]]; then
+            if ! git merge-base --is-ancestor "${remote_sha}" "${local_sha}" 2>/dev/null; then
+                echo "REFUSED: non-fast-forward push to main rewrites published history." >&2
+                echo "See docs/adr/ADR-0002-branching-and-release-model.md." >&2
+                exit 1
+            fi
+        fi
+    fi
+done
+
+"${ROOT}/tools/scan-secrets" || exit 1

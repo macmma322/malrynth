@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Reports the exact source revision of this Malrynth checkout.
+#
+# This is the superproject's core question -- "which exact source state is this?" -- in
+# executable form. While Malrynth is a single repository the answer is one commit; when
+# components are extracted this tool gains their pinned commits without changing its
+# interface. See docs/adr/ADR-0001-repository-topology.md.
+#
+# Usage: tools/status
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+cd "${MALRYNTH_ROOT}"
+need_cmd git
+
+printf '%-14s %s\n' "revision"  "$(git rev-parse HEAD 2>/dev/null || echo '(no commits)')"
+printf '%-14s %s\n' "branch"    "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '-')"
+printf '%-14s %s\n' "described" "$(git describe --tags --always --dirty 2>/dev/null || echo '-')"
+
+if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+    printf '%-14s %s\n' "tree" "${C_YEL}dirty${C_RST}"
+    git status --porcelain | sed 's/^/               /'
+else
+    printf '%-14s %s\n' "tree" "${C_GRN}clean${C_RST}"
+fi
+
+if [[ -f .gitmodules ]]; then
+    echo
+    info "components"
+    git submodule status
+else
+    printf '%-14s %s\n' "components" "none (single-repository topology, ADR-0001)"
+fi

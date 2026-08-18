@@ -1,0 +1,15 @@
+# Malrynth cargo configuration.
+#
+# This file is committed and must stay machine-independent: no absolute paths, no
+# host-specific toolchain locations, no target directory override. Developers who want
+# build output off a slow volume set CARGO_TARGET_DIR in their environment instead
+# (see docs/operations/DEVELOPMENT-ENVIRONMENT.md).
+
+[target.x86_64-unknown-none]
+# The kernel is linked at a fixed physical address by core/kernel/kernel.ld and is loaded
+# verbatim by malboot, which performs NO relocation processing. Rust defaults this target
+# to a position-independent executable (ET_DYN), which would require the loader to apply
+# R_X86_64_RELATIVE relocations before entry. Building non-PIE with a static relocation
+# model yields an ET_EXEC image whose addresses are already final, which is what the M0
+# loader contract specifies and what the loader verifies.
+rustflags = ["-C", "relocation-model=static", "-C", "link-arg=--no-pie"]

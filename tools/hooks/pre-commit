@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Malrynth pre-commit hook. Installed by tools/bootstrap.
+#
+# Bypassable with --no-verify. This is a guard rail against mistakes, not a security control;
+# see docs/adr/ADR-0002-branching-and-release-model.md.
+set -Eeuo pipefail
+ROOT="$(git rev-parse --show-toplevel)"
+
+"${ROOT}/tools/scan-secrets" --staged || exit 1
+
+# Only check formatting when Rust actually changed, so documentation commits stay fast.
+if git diff --cached --name-only --diff-filter=ACM | grep -q '\.rs$'; then
+    cargo fmt --all -- --check || {
+        echo "formatting check failed; run: cargo fmt --all" >&2
+        exit 1
+    }
+fi

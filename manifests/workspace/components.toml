@@ -1,0 +1,66 @@
+# Malrynth component inventory.
+#
+# The authoritative build definition is Cargo.toml; this file records the ARCHITECTURAL
+# role of each component, its trust level, and the criteria under which it would earn its
+# own repository. Cargo cannot express any of that.
+
+schema_version = 1
+malrynth_revision = "0.0.1-m0"
+topology = "single-repository"          # See docs/adr/ADR-0001-repository-topology.md
+
+[[component]]
+name          = "malrynth-abi"
+path          = "core/abi"
+role          = "Boot handoff contract between loader and kernel"
+targets       = ["host", "x86_64-unknown-uefi", "x86_64-unknown-none"]
+trust         = "linked-into-privileged-code"
+external_deps = 0
+status         = "EXPERIMENTAL"          # ABI may change freely until M3
+future_repo    = "malrynth-sdk (candidate, once the ABI is public and stable)"
+
+[[component]]
+name          = "malboot"
+path          = "core/boot/uefi"
+role          = "UEFI loader: validates and places the kernel, exits boot services"
+targets       = ["x86_64-unknown-uefi"]
+trust         = "privileged-at-boot-only"  # Ceases to exist at ExitBootServices
+external_deps = 1                          # uefi -- see THIRD_PARTY.md
+status        = "IMPLEMENTED (M0)"
+future_repo   = "malrynth-core"
+
+[[component]]
+name          = "malrynth-kernel"
+path          = "core/kernel"
+role          = "The Malrynth kernel"
+targets       = ["x86_64-unknown-none"]
+trust         = "ring-0-permanent"
+external_deps = 0                          # Defended by policy; see THIRD_PARTY_POLICY.md
+status        = "IMPLEMENTED (M0: entry and diagnostics only)"
+future_repo   = "malrynth-core"
+
+# Components that are DOCUMENTED but deliberately NOT created. Recorded here so the
+# roadmap is explicit and nobody creates an empty tree to satisfy a diagram.
+[[planned]]
+name      = "products"
+earliest  = "M7"
+reference = "docs/architecture/PRODUCT-COMPOSITION.md"
+
+[[planned]]
+name      = "ui"
+earliest  = "M6"
+reference = "docs/roadmap/M6.md"
+
+[[planned]]
+name      = "apps"
+earliest  = "M7"
+reference = "docs/application-map.md"
+
+[[planned]]
+name      = "sdk"
+earliest  = "M7"
+reference = "docs/roadmap/M7.md"
+
+[[planned]]
+name      = "compat"
+earliest  = "post-M7"
+reference = "docs/compatibility/COMPATIBILITY-STRATEGY.md"

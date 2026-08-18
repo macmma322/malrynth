@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Prepares this machine to build Malrynth.
+#
+# This is the ONLY tool permitted to mutate the developer's environment, and it changes
+# only user-local rustup state -- never system packages. System dependencies (QEMU, OVMF)
+# are reported by tools/doctor with install instructions, and are deliberately NOT
+# installed automatically: silently installing system packages on someone's machine is not
+# a build system's decision to make.
+#
+# Usage: tools/bootstrap
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+
+need_cmd rustup
+
+info "installing pinned toolchain from rust-toolchain.toml"
+# Any cargo invocation in the repo root triggers rustup to honour the pin.
+(cd "${MALRYNTH_ROOT}" && cargo --version)
+
+info "installing required compilation targets"
+(cd "${MALRYNTH_ROOT}" && rustup target add "${TARGET_LOADER}" "${TARGET_KERNEL}")
+
+info "installing git hooks"
+# core.hooksPath points git at the tracked hooks directory, so hooks are versioned with the
+# repository instead of living untracked in .git/hooks where they are invisible and lost on
+# every fresh clone.
+git -C "${MALRYNTH_ROOT}" config core.hooksPath tools/hooks
+
+# NTFS/FUSE cannot store POSIX permissions; on such a volume git must be told to ignore
+# mode bits or every file is committed as executable.
+fstype="$(findmnt -T "${MALRYNTH_ROOT}" -no FSTYPE 2>/dev/null || echo unknown)"
+case "${fstype}" in
+    fuseblk|ntfs|ntfs3|vfat|exfat|msdos)
+        git -C "${MALRYNTH_ROOT}" config core.fileMode false
+        git -C "${MALRYNTH_ROOT}" config core.autocrlf false
+        git -C "${MALRYNTH_ROOT}" config core.eol lf
+        info "configured git for a filesystem without POSIX permissions (${fstype})"
+        ;;
+esac
+
+ok "toolchain ready"
+info "run tools/doctor to check the remaining host dependencies"

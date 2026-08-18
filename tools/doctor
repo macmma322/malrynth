@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# Inspects this machine's readiness to build and boot Malrynth.
+#
+# STRICTLY READ-ONLY. This tool never installs, upgrades, or reconfigures anything. It
+# reports what is present, what is missing, and exactly how to obtain what is missing.
+# Environment mutation lives in tools/bootstrap, and system packages are the developer's
+# decision, not the build system's.
+#
+# Exit status: 0 if everything required for M0 is present, 1 otherwise.
+#
+# Usage: tools/doctor
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+
+missing=0
+optional_missing=0
+
+require() {  # require <label> <install-hint> <command...>
+    local label="$1" hint="$2"; shift 2
+    if out="$("$@" 2>&1 | head -1)"; then
+        ok "$(printf '%-22s %s' "${label}" "${out}")"
+    else
+        fail "$(printf '%-22s MISSING -- %s' "${label}" "${hint}")"
+        missing=$((missing + 1))
+    fi
+}
+
+optional() {
+    local label="$1" hint="$2"; shift 2
+    if out="$("$@" 2>&1 | head -1)"; then
+        ok "$(printf '%-22s %s' "${label}" "${out}")"
+    else
+        warn "$(printf '%-22s absent -- %s' "${label}" "${hint}")"
+        optional_missing=$((optional_missing + 1))
+    fi
+}
+
+info "host"
+ok "$(printf '%-22s %s' "os" "$(. /etc/os-release 2>/dev/null && echo "${PRETTY_NAME}" || uname -s)")"
+ok "$(printf '%-22s %s' "kernel" "$(uname -sr)")"
+ok "$(printf '%-22s %s' "architecture" "$(uname -m)")"
+ok "$(printf '%-22s %s' "cpus" "$(nproc 2>/dev/null || echo '?')")"
+
+echo
+info "toolchain (required)"
+require "git"     "apt install git"    git --version
+require "rustup"  "https://rustup.rs"  rustup --version
+require "cargo"   "https://rustup.rs"  cargo --version
+require "rustc"   "https://rustup.rs"  rustc --version
+
+echo
+info "compilation targets (required)"
+for target in "${TARGET_LOADER}" "${TARGET_KERNEL}"; do
+    if rustup target list --installed 2>/dev/null | grep -qx "${target}"; then
+        ok "$(printf '%-22s installed' "${target}")"
+    else
+        fail "$(printf '%-22s MISSING -- run tools/bootstrap' "${target}")"
+        missing=$((missing + 1))
+    fi
+done
+
+echo
+info "virtualisation (required to run M0)"
+require "qemu-system-x86_64" "apt install qemu-system-x86" qemu-system-x86_64 --version
+
+if read -r code vars < <(find_ovmf); then
+    ok "$(printf '%-22s %s' "OVMF code" "${code}")"
+    ok "$(printf '%-22s %s' "OVMF vars" "${vars}")"
+else
+    fail "$(printf '%-22s MISSING -- apt install ovmf (Debian/Ubuntu), edk2-ovmf (Fedora/Arch)' "OVMF firmware")"
+    missing=$((missing + 1))
+fi
+
+if [[ -r /dev/kvm && -w /dev/kvm ]]; then
+    ok "$(printf '%-22s available (faster boots; not required)' "KVM")"
+else
+    warn "$(printf '%-22s not accessible -- QEMU falls back to TCG emulation. Add your user to the kvm group.' "KVM")"
+fi
+
+echo
+info "optional (not needed for M0)"
+optional "mtools"  "apt install mtools -- needed to build a real distributable FAT ESP image; M0 uses QEMU virtual FAT instead" mformat --version
+optional "clang"   "apt install clang -- not required: the Rust toolchain ships rust-lld" clang --version
+
+echo
+info "workspace"
+ok "$(printf '%-22s %s' "root" "${MALRYNTH_ROOT}")"
+ok "$(printf '%-22s %s' "target dir" "${CARGO_TARGET_DIR}")"
+
+# The filesystem hosting the source tree materially affects Git behaviour and build speed.
+# This check exists because Malrynth's primary development volume is NTFS, where POSIX mode
+# bits are silently discarded -- a condition that corrupts file modes in Git if core.fileMode
+# is left at its default. See docs/operations/DEVELOPMENT-ENVIRONMENT.md.
+fstype="$(findmnt -T "${MALRYNTH_ROOT}" -no FSTYPE 2>/dev/null || echo unknown)"
+ok "$(printf '%-22s %s' "filesystem" "${fstype}")"
+case "${fstype}" in
+    fuseblk|ntfs|ntfs3|vfat|exfat|msdos)
+        warn "$(printf '%-22s cannot store POSIX permissions.' "  ${fstype}")"
+        filemode="$(git -C "${MALRYNTH_ROOT}" config --get core.fileMode 2>/dev/null || echo unset)"
+        if [[ "${filemode}" == "false" ]]; then
+            ok "$(printf '%-22s core.fileMode=false (correct for this filesystem)' "  git")"
+        else
+            fail "$(printf '%-22s core.fileMode is %s; must be false here, or every file is committed as executable.' "  git" "${filemode}")"
+            fail "$(printf '%-22s fix: git config core.fileMode false' "")"
+            missing=$((missing + 1))
+        fi
+        warn "$(printf '%-22s builds are slow on FUSE. Consider: export CARGO_TARGET_DIR=$HOME/.cache/malrynth-target' "  build")"
+        ;;
+esac
+
+echo
+if (( missing > 0 )); then
+    fail "${missing} required item(s) missing -- Malrynth cannot be built or booted yet"
+    exit 1
+fi
+ok "all required dependencies present"
+(( optional_missing > 0 )) && info "${optional_missing} optional item(s) absent; see notes above"
+exit 0

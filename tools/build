@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Builds the Malrynth M0 boot image.
+#
+# Produces:
+#   esp/EFI/BOOT/BOOTX64.EFI  -- Malrynth Boot (the UEFI loader)
+#   esp/malrynth/kernel.elf   -- the Malrynth kernel
+#
+# The two components build for DIFFERENT targets, so each is built explicitly. There is no
+# single `cargo build` that is correct for this workspace; see the note in Cargo.toml.
+#
+# Usage: tools/build [--debug]
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+
+PROFILE="release"
+PROFILE_FLAG="--release"
+[[ "${1:-}" == "--debug" ]] && { PROFILE="debug"; PROFILE_FLAG=""; }
+
+need_cmd cargo
+
+info "building loader (${TARGET_LOADER}, ${PROFILE})"
+cargo build -p malboot --target "${TARGET_LOADER}" ${PROFILE_FLAG}
+
+info "building kernel (${TARGET_KERNEL}, ${PROFILE})"
+cargo build -p malrynth-kernel --target "${TARGET_KERNEL}" ${PROFILE_FLAG}
+
+LOADER="${CARGO_TARGET_DIR}/${TARGET_LOADER}/${PROFILE}/malboot.efi"
+KERNEL="${CARGO_TARGET_DIR}/${TARGET_KERNEL}/${PROFILE}/malrynth-kernel"
+[[ -f "${LOADER}" ]] || die "loader not produced at ${LOADER}"
+[[ -f "${KERNEL}" ]] || die "kernel not produced at ${KERNEL}"
+
+info "assembling EFI system partition"
+# Rebuild from scratch so a stale artifact can never be booted and mistaken for a fresh one.
+rm -rf "${ESP_DIR}"
+mkdir -p "${ESP_DIR}/EFI/BOOT" "${ESP_DIR}/malrynth"
+# BOOTX64.EFI is the removable-media default path defined by the UEFI specification;
+# firmware boots it without needing an NVRAM boot entry.
+cp -f "${LOADER}" "${ESP_DIR}/EFI/BOOT/BOOTX64.EFI"
+cp -f "${KERNEL}" "${ESP_DIR}/malrynth/kernel.elf"
+
+loader_size=$(stat -c%s "${ESP_DIR}/EFI/BOOT/BOOTX64.EFI")
+kernel_size=$(stat -c%s "${ESP_DIR}/malrynth/kernel.elf")
+
+# M0 begins capturing size budgets now, because a budget introduced after a regression is
+# an excuse rather than a gate. See docs/performance/PERFORMANCE-CONSTITUTION.md.
+mkdir -p "${BUILD_DIR}"
+cat > "${BUILD_DIR}/size-report.txt" <<EOF
+loader_bytes=${loader_size}
+kernel_bytes=${kernel_size}
+profile=${PROFILE}
+EOF
+
+ok "loader  ${loader_size} bytes"
+ok "kernel  ${kernel_size} bytes"
+ok "image   ${ESP_DIR}"

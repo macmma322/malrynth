@@ -1,0 +1,20 @@
+# Malrynth pinned toolchain.
+#
+# Why pinned: an operating system must build identically on every developer machine
+# and in CI, for years. An unpinned toolchain makes "it built yesterday" unfalsifiable
+# and makes bisection across a toolchain bump indistinguishable from a real regression.
+#
+# Why *stable* and not nightly: both Malrynth targets below ship precompiled `core`/`alloc`
+# via rustup, so no `-Z build-std` and therefore no nightly is required. Depending on
+# nightly would tie the kernel's buildability to unstable compiler features -- an
+# avoidable long-term liability. Custom target JSON (and thus nightly) is deferred until
+# the kernel genuinely needs an ABI the built-in targets cannot express; see
+# docs/adr/ADR-0003-toolchain-and-targets.md.
+[toolchain]
+# `rust-src` and `llvm-tools` are deliberately NOT listed: `rust-src` is only needed for
+# `-Z build-std`, which this toolchain choice avoids, and the toolchain already ships
+# `rust-lld` and `rust-objcopy`. Adding unused components would slow every bootstrap.
+channel = "1.97.1"
+components = ["rustfmt", "clippy"]
+targets = ["x86_64-unknown-uefi", "x86_64-unknown-none"]
+profile = "minimal"

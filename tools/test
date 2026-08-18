@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Runs the full Malrynth verification suite. This is the local equivalent of CI; anything
+# CI does must be runnable here, and vice versa.
+#
+#   1. formatting            cargo fmt --check
+#   2. lint                  cargo clippy -D warnings, per target
+#   3. host unit tests       the ABI layout assertions
+#   4. build                 loader + kernel + ESP
+#   5. boot smoke test       QEMU, repeated, asserting the exact success marker
+#
+# Usage: tools/test [--boots N] [--skip-boot]
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+
+BOOTS=3
+SKIP_BOOT=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --boots) BOOTS="$2"; shift 2 ;;
+        --skip-boot) SKIP_BOOT=1; shift ;;
+        -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+        *) die "unknown argument: $1" ;;
+    esac
+done
+
+need_cmd cargo
+failures=0
+step() {
+    local name="$1"; shift
+    info "${name}"
+    if "$@"; then ok "${name}"; else fail "${name}"; failures=$((failures + 1)); fi
+}
+
+step "formatting"       cargo fmt --all -- --check
+step "lint (abi, host)" cargo clippy -p malrynth-abi --all-targets -- -D warnings
+step "lint (loader)"    cargo clippy -p malboot --target "${TARGET_LOADER}" -- -D warnings
+step "lint (kernel)"    cargo clippy -p malrynth-kernel --target "${TARGET_KERNEL}" -- -D warnings
+step "unit tests (abi)" cargo test -p malrynth-abi
+step "build"            "${MALRYNTH_ROOT}/tools/build"
+
+if [[ "${SKIP_BOOT}" == "0" ]]; then
+    # Repeated because a boot path that works once but not reliably is not working.
+    # Firmware initialisation order and memory-map layout can vary between runs.
+    for i in $(seq 1 "${BOOTS}"); do
+        step "boot smoke test ${i}/${BOOTS}" \
+            "${MALRYNTH_ROOT}/tools/run-qemu" --timeout 60 --quiet
+    done
+else
+    warn "boot smoke test skipped (--skip-boot)"
+fi
+
+echo
+if (( failures == 0 )); then
+    ok "all checks passed"
+    exit 0
+fi
+fail "${failures} check(s) failed"
+exit 1
