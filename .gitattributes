@@ -1,0 +1,18 @@
+# Malrynth is developed on a host whose primary volume is NTFS (see
+# docs/operations/DEVELOPMENT-ENVIRONMENT.md). Normalise line endings in the
+# repository regardless of host or mount so hashes are host-independent.
+* text=auto eol=lf
+
+# Never touch binary or firmware-adjacent artifacts.
+*.efi   binary
+*.elf   binary
+*.img   binary
+*.iso   binary
+*.fd    binary
+*.bin   binary
+*.png   binary
+
+# Linker scripts and assembly are text but must keep exact bytes.
+*.ld    text eol=lf
+*.s     text eol=lf
+*.S     text eol=lf
