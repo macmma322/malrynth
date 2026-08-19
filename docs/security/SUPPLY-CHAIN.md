@@ -41,16 +41,27 @@ Reproducible builds are the control that makes a compromised pipeline *detectabl
 independent rebuild that produces different bytes is evidence. Pinning the exact toolchain
 and lockfile is the prerequisite, and is done.
 
-**Measured status (2026-08-19): builds are NOT reproducible across build directories.**
-Building the same commit at two different paths produced kernel images of 116,208 and
-116,280 bytes. The cause was identified rather than guessed: the build directory is embedded
-verbatim in the image's debug information, and the size delta equals the path-length
-difference. Verified with `strings` on both images.
+**Measured status (2026-08-19): builds ARE reproducible across build directories, and this
+is enforced by a test.** `tools/check-reproducible` builds the same source at two paths of
+deliberately different length and requires byte-identical images. It runs in `tools/test` and
+in CI, because a reproducibility claim without a test is a wish.
 
-This is a real gap, not a theoretical one, and it means an independent rebuild currently
-cannot be used as evidence of pipeline integrity. Remediation is `--remap-path-prefix` (plus
-auditing timestamps and non-deterministic ordering), tracked for M5. Until then, **no
-reproducibility claim may be made.**
+Three distinct causes were found and fixed, each identified rather than guessed:
+
+| Cause | Fix |
+|---|---|
+| Absolute source, cargo-registry and Rust-sysroot paths embedded in DWARF | `--remap-path-prefix` for all three roots |
+| PE `TimeDateStamp` stamped with wall-clock time (two copies) | `/Brepro` — LLD substitutes a content hash |
+| PE debug-directory CodeView GUID derived from a side PDB whose contents embed path-dependent object paths | `/DEBUG:NONE` for the loader; the kernel retains full DWARF and is reproducible with it |
+
+Flags live in `tools/lib.sh` as the single source of truth; `.cargo/config.toml` deliberately
+sets no `rustflags`, because `RUSTFLAGS` replaces rather than merges with them and two
+mechanisms that silently override each other is exactly the invisible failure this project
+refuses to ship.
+
+**Scope of the claim:** reproducible across *build directories* on one machine with the
+pinned toolchain. Not yet demonstrated across different host distributions or over time.
+Cross-host reproducibility remains unverified and must not be claimed.
 
 ## Planned
 

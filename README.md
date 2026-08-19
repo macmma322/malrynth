@@ -79,8 +79,15 @@ anything missing and how to get it, and never installs anything itself.
 docs/       constitution, architecture, ADRs, research, roadmap,
             security, performance, compatibility, specs, operations, legal
 manifests/  component inventory, product compositions, release records
-tools/      bootstrap doctor build test run-qemu status scan-secrets + git hooks
+tools/      bootstrap doctor build test run-qemu status
+            symbolize check-panic-path check-reproducible scan-secrets + git hooks
 core/       abi/  boot/uefi/ (malboot)  kernel/
+```
+
+If the kernel panics, it prints a validated frame-pointer backtrace; resolve it with:
+
+```bash
+./tools/run-qemu | ./tools/symbolize
 ```
 
 **One repository, deliberately.** Not seven. The reasoning — and the explicit, testable

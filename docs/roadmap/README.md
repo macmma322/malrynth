@@ -17,6 +17,24 @@ on unstarted kernel work is a guess presented as a plan.
 Beyond M7: gaming, deeper Wine/Proton, the Linux personality, Broadcast, a broad application
 set, account and sync, organisations, Server productisation, Mobile, Console.
 
+## Release artifacts
+
+Naming matters, because a name sets expectations that engineering then has to meet:
+
+| Artifact | Contents | Honest claim |
+|---|---|---|
+| **Malrynth Kernel Developer Preview** | M0–M4 | A real custom kernel with capabilities, IPC, user-space drivers and IOMMU confinement. Not a usable OS. |
+| **Malrynth Developer OS** | + M5–M7 | Self-hosting text-mode system, then a developer desktop. |
+| **Malrynth Desktop 1.0** | + certification, GPU, audio, gaming corpus, Shield, recovery, accessibility | A daily driver on certified hardware. |
+
+The first public artifact is **not** called 1.0. Calling an early kernel "1.0" would commit to
+guarantees nothing has earned.
+
+## Supporting documents
+
+- [Subsystem coverage](SUBSYSTEM-COVERAGE.md) — power, time, text, input, printing, accessibility and the other subsystems that decide whether an OS is trustworthy
+- [Effort and risk](EFFORT-AND-RISK.md) — scale of the programme, and why scope explosion is the top risk
+
 Every milestone document states objective, dependencies, scope, **explicit non-scope**, exit
 criteria, tests, performance gates, security gates, and required documentation. The non-scope
 section is the one that keeps milestones finite.

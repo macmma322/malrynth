@@ -17,13 +17,33 @@ engine's behaviour at runtime.
 
 ## Objects, handles, rights
 
-- A **kernel object** is a kernel-managed resource: address space, thread, memory region,
-  channel, interrupt, IRQ, device MMIO range.
+- A **kernel object** is a kernel-managed resource. The initial namespace (ADR-0004,
+  PROPOSED) is:
+
+  | Group | Objects |
+  |---|---|
+  | Execution | `Job`, `Process`, `Thread` |
+  | Memory | `AddressSpace`, `MemoryObject`, `MemoryMapping` |
+  | Communication | `Channel`, `Port`, `Event`, `Timer` |
+  | Device | `Interrupt`, `Device`, `IoRegion`, `DmaDomain`, `DmaMapping` |
+  | Meta | `Resource`, `DebugObject`, `ExceptionPort` |
 - A **handle** is a process-local, unforgeable reference to an object, valid only in the
   process holding it. Handle values are process-local indices, so a leaked numeric value
   grants nothing.
-- **Rights** are per-handle: `READ`, `WRITE`, `EXECUTE`, `MAP`, `TRANSFER`, `DUPLICATE`,
-  `DESTROY`, and object-specific rights.
+- **Rights** are per-handle, drawn from a fixed vocabulary (see
+  [ADR-0004](../adr/ADR-0004-kernel-object-model.md)):
+
+  ```
+  READ  WRITE  EXECUTE  MAP      access
+  WAIT  SIGNAL                   synchronisation
+  TRANSFER  DUPLICATE            delegation
+  ENUMERATE  CONFIGURE           inspection and control
+  DEBUG  ADMIN                   privileged
+  ```
+
+  Rights are object-type-specific: `SIGNAL` is meaningful on an `Event` and meaningless on a
+  sealed executable image. There is no generic `ROOT` right, and no application receives
+  `ADMIN`.
 - Rights may be **attenuated** on duplication but never amplified. A process cannot
   manufacture authority it was not given. This is the invariant the whole model rests on.
 

@@ -34,7 +34,10 @@ minimum reversibility.
    is `uefi` (MIT OR Apache-2.0), which is compatible with every plausible option.** This
    compatibility must be re-checked before each new dependency, because a single
    incompatible dependency can foreclose an entire licensing branch.
-3. Contributor terms (DCO or CLA) must be decided **before** the first external contribution.
+3. **Media codecs require separate patent review.** Codec patent obligations are independent
+   of source-code licensing: a permissive source license grants no patent safety for a codec
+   implementation. This must be settled before any media application ships.
+4. Contributor terms (DCO or CLA) must be decided **before** the first external contribution.
    Retroactively obtaining agreement from contributors is often impossible.
 
 ## Rules in force now
@@ -47,6 +50,20 @@ minimum reversibility.
   derivative work with license obligations.
 - **No Malrynth code is published publicly** while licensing is unresolved. All repositories
   are private.
+
+## Recorded input: the open-core recommendation
+
+The founder-supplied research report recommends an **open-core** direction: kernel, core SDK
+specifications and low-level interoperability interfaces under a permissive license with an
+explicit patent grant, while some first-party products and hosted services carry separate
+terms. Its argument is that this improves security review, driver adoption, academic work,
+developer confidence, community ports and vendor integration, without requiring hosted
+services to be free infrastructure.
+
+**Recorded as an input, not adopted as a decision.** It is a strong argument and may well be
+right, but a license granted cannot be revoked for code already released, and nothing
+currently forces the choice. Recording it means the reasoning survives to the moment the
+decision is actually required.
 
 ## Decision trigger
 

@@ -17,8 +17,15 @@ architectural property, decided early, not an optimisation applied late.
 - **Shared memory for bulk data.** Bulk data is never copied through the kernel. A channel
   establishes a shared region; subsequent transfers move ownership or notify, not bytes.
   Every large-data path (storage, network, graphics, media) is expected to use this.
-- **Asynchronous notification** for events that must not block a sender (interrupts,
-  completion signals).
+- **Shared descriptor rings** for sustained high-throughput producer/consumer paths:
+  networking, audio, and device queues. These are architecturally distinct from the two
+  mechanisms above, not an optimisation of them — they have their own lifetime, ordering and
+  backpressure properties, and they are what make a user-space driver model viable at line
+  rate. A channel carries the *control plane*; the ring carries the data.
+
+- **Asynchronous notification** as a signalling primitive for events that must not block a
+  sender (interrupts, completion signals). This signals that something happened; it is not a
+  bulk transport.
 
 ## Rules
 
@@ -26,9 +33,12 @@ architectural property, decided early, not an optimisation applied late.
    parsing is a user-space concern; a kernel that parses protocols is a kernel with an
    attack surface proportional to the number of protocols.
 2. **Handles transfer with messages**, subject to rights (see `CAPABILITY-MODEL.md`).
-3. **No unbounded queueing in the kernel.** Unbounded queues turn a misbehaving sender into a
+3. **Message payloads are small and bounded.** The inline channel payload budget starts at
+   roughly 256-512 bytes, to be settled by benchmark rather than doctrine. Anything larger
+   travels as a `MemoryObject` handle or through a shared ring.
+4. **No unbounded queueing in the kernel.** Unbounded queues turn a misbehaving sender into a
    kernel memory-exhaustion attack. Backpressure is explicit.
-4. **Every IPC path has a measured budget** before it is declared done. See
+5. **Every IPC path has a measured budget** before it is declared done. See
    `docs/performance/PERFORMANCE-CONSTITUTION.md`.
 
 ## Open questions (UNSOLVED)

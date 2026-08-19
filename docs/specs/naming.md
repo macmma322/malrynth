@@ -36,6 +36,27 @@ needed. Rust target triples are used verbatim (`x86_64-unknown-none`).
 Branches: `main`, `feature/<topic>`, `fix/<topic>`, `research/<topic>`, `release/<version>`.
 Tags: `v<major>.<minor>.<patch>-<milestone>`, annotated, e.g. `v0.0.1-m0`. See ADR-0002.
 
+## Syscalls (PROPOSED — see [ADR-0004](../adr/ADR-0004-kernel-object-model.md))
+
+`mly_<object>_<verb>`, e.g. `mly_channel_write`, `mly_memory_seal`, `mly_dma_map`.
+
+`mly_` is the **one sanctioned abbreviation** in Malrynth. It is short because it prefixes
+every syscall in the system; everything after it is spelled out.
+
+## Package format (PROPOSED)
+
+Package files use the extension **`.mpk`**. Installed application state is partitioned by
+lifetime, so that uninstall can offer meaningful choices instead of one destructive button:
+
+| Path | Lifetime |
+|---|---|
+| `/package` | read-only, content-addressed |
+| `/config` | private, persistent |
+| `/data` | private, persistent |
+| `/cache` | disposable at any time |
+| `/temp` | session |
+| `/secrets` | Vault handles, never plaintext |
+
 ## Identifiers not yet implemented (PROPOSED)
 
 Recorded now so they are chosen once rather than invented per subsystem:

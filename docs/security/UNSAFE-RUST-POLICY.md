@@ -55,6 +55,7 @@ approved on skim.
 | `kernel/src/serial/mod.rs` | UART register access; `static mut` COM1 | Single-threaded early boot; must work before locks exist |
 | `kernel/src/main.rs` | `.bss` zeroing; `BootInfo` deref; region slice | Linker symbols and the loader contract |
 | `boot/uefi/src/main.rs` | Image placement, `ExitBootServices`, kernel entry | Firmware interaction and control transfer |
+| `kernel/src/debug/mod.rs` | Reading `rbp`; dereferencing frame pointers | No safe way to walk a stack; **every frame is validated before dereference** (alignment, direction, bounded gap) precisely because the input is a possibly-corrupt stack |
 
 `boot/uefi/src/elf.rs` contains **no `unsafe`** — deliberately. It parses untrusted input,
 which is precisely where unsafe code is least acceptable, so every field is read by

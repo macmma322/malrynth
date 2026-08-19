@@ -46,6 +46,33 @@ round-trip latency; application cold and warm start; Files navigation on a large
 **Feature overhead:** Shield (security) overhead; Broadcast (streaming) overhead. Both must
 be measured as deltas against the same workload with the feature disabled.
 
+## Proposed release gates
+
+**PROPOSED — none of these is measured, and none is a claim.** They exist because a budget
+defined after the first implementation is a description rather than a constraint. Every one
+will move once real prototypes exist; the requirement is that they exist *now*.
+
+| Metric | Initial target on reference hardware |
+|---|---:|
+| Small same-core IPC round trip | < 1.5 us p50 |
+| Kernel context-switch path | < 1 us p50 |
+| Minimal native app warm launch | < 100 ms p50 |
+| Files navigation, existing window | < 50 ms p50; < 100 ms p95 |
+| Indexed filename first result | < 50 ms p50 |
+| Full-text first result | < 100 ms p50 |
+| Desktop services idle CPU | < 0.5% typical |
+| Desktop base private memory (excl. cache) | < 750 MB |
+| NVMe sequential throughput | > 90% of validated reference-driver baseline |
+| Network throughput | > 90% of validated hardware baseline |
+| Compositor fullscreen direct path | no material FPS regression |
+| Shield gaming overhead | < 2% median FPS regression |
+| Broadcast 1440p60 hardware encode | < 3% median game FPS regression |
+| OS handoff to shell | < 5 s on a certified desktop |
+| Audio | stable 128-frame / 48 kHz path under stress |
+
+Each gate becomes enforceable only in the milestone that builds the subsystem it measures;
+until then it is a target with no test, and is labelled as such.
+
 ## M0 budgets
 
 M0 is a boot path with no scheduler, so only size and boot are meaningful. Capturing them now
@@ -53,14 +80,21 @@ establishes the ratchet before there is anything to hide.
 
 | Metric | Value | Status |
 |---|---|---|
-| Loader image size | 41,472 bytes | **MEASURED** (release, 2026-08-19) |
-| Kernel image size | 116,208 bytes | **MEASURED** (release, 2026-08-19) |
+| Loader image size | 40,960 bytes | **MEASURED** (release, 2026-08-19) |
+| Kernel image size | 130,688 bytes | **MEASURED** (release, 2026-08-19) |
+| Build reproducibility | byte-identical across build paths | **MEASURED**, enforced by `tools/check-reproducible` |
 | Kernel loaded extent | 16 KiB | **MEASURED** (three `PT_LOAD` segments) |
 | Kernel image size ceiling | 256 KiB | PROPOSED |
 | Loader image size ceiling | 128 KiB | PROPOSED |
 | Firmware-exit → boot marker | not yet instrumented | UNSOLVED |
 
-The gap between the 116 KiB on-disk ELF and the 16 KiB loaded extent is debug information,
+The kernel grew from 116,208 to 130,688 bytes when the panic backtrace and
+`-C force-frame-pointers=yes` were added. That is a deliberate, recorded trade: a kernel that
+cannot say where it panicked costs far more engineering time than the bytes are worth. It is
+recorded here rather than absorbed silently, which is the entire point of tracking sizes from
+M0.
+
+The gap between the on-disk ELF and the 16 KiB loaded extent is debug information,
 retained deliberately for symbolisation (see ADR-0003) and stripped from distributable
 images later. **Both numbers are tracked** so that a real code-size regression cannot hide
 behind the debug-info difference.
