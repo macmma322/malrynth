@@ -110,7 +110,7 @@ composition.
 
 Applications will therefore live in **one application workspace**, and only when they exist.
 They do not exist now, and no directories are created for them. The intended structure is
-recorded in [`docs/application-map.md`](../application-map.md) so the roadmap is expressed
+recorded in [`docs/apps/APPLICATION-MAP.md`](../apps/APPLICATION-MAP.md) so the roadmap is expressed
 without generating scaffolding.
 
 An individual application earns its own repository only if it develops a genuinely independent
