@@ -59,7 +59,7 @@ platform.
 
 **None of those can be first-release requirements.** The mitigation is structural rather than
 motivational: every milestone document states what is explicitly *out* of scope, and
-`docs/application-map.md` deliberately records the application catalogue as documentation
+`docs/apps/APPLICATION-MAP.md` deliberately records the application catalogue as documentation
 rather than as directories.
 
 ## What this means for the current milestone
