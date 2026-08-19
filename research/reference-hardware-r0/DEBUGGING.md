@@ -203,7 +203,7 @@ the hardware record, not general architecture.
 |---|---|---|---|---|
 | UEFI Forum | 2026-08-19 | Serial, Debugport and GOP boot interfaces | https://uefi.org/specs/UEFI/2.11/ | Specification; no code copied |
 | UEFI Forum | 2026-08-19 | SPCR/DBG2 and ACPI platform description | https://uefi.org/specs/ACPI/6.6/ | Specification; no code copied |
-| MSI | 2026-08-19 | Q470E board documents 16550A UARTs and hardware debug surfaces | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual facts only |
+| MSI | 2026-08-19 | Q470E board's reviewed English manual dated 2023-01-31 documents 16550A UARTs and hardware debug surfaces | https://ipc.msi.com/product_download/Industrial-Motherboard/ATX/MS-98N9 | Manual facts only |
 | ASUS | 2026-08-19 | Q370 two COM headers, speaker and vendor-specific LPC debug header/card | https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf | Manual facts only |
 | ASUS | 2026-08-19 | B550 COM/LPC debug/speaker availability | https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/ | Product facts only |
 | MSI | 2026-08-19 | Budget B550 COM and debug-LED facilities | https://www.msi.com/Motherboard/PRO-B550M-P/Specification | Product facts only |

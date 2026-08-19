@@ -162,7 +162,7 @@ descriptions. The selected MSI Q470E board documents rear/header serial options 
 16550A-compatible UART; the ASUS Q470E alternative exposes COM headers but still needs exact
 UART qualification.
 [UEFI 2.11](https://uefi.org/specs/UEFI/2.11/),
-[MSI Q470E manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf),
+[MSI Q470E downloads/manual index](https://ipc.msi.com/product_download/Industrial-Motherboard/ATX/MS-98N9),
 [ASUS Q470E manual](https://dlcdnets.asus.com/pub/ASUS/mb/Embedded_IPC/Q470EI-IM-A/E21947_Q470EI-IM-A_UM_v5_WEB.pdf?model=Q470EI-IM-A)
 
 **PROPOSED MALRYNTH DECISION:** Use three phases:
@@ -181,7 +181,7 @@ Never infer RS-232 voltage, I/O base, IRQ or clock merely from a â€œCOM headerâ€
 I210-AT plus I219LM, TPM and M.2. ASUS documents Q470EI-IM-A with Q470E, five COM ports,
 LPC debug, TPM, M.2 and I210-AT plus I219LM. ASUS declares AMI UEFI, COM/LPC debug and
 onboard TPM2 for Pro B550M-C/CSM.
-[MSI Q470E manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf),
+[MSI Q470E downloads/manual index](https://ipc.msi.com/product_download/Industrial-Motherboard/ATX/MS-98N9),
 [ASUS Q470E manual](https://dlcdnets.asus.com/pub/ASUS/mb/Embedded_IPC/Q470EI-IM-A/E21947_Q470EI-IM-A_UM_v5_WEB.pdf?model=Q470EI-IM-A),
 [B550 specifications](https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/)
 
@@ -215,7 +215,7 @@ failure returns to firmware or halts rather than entering with ambiguous ownersh
 |---|---|---|---|---|
 | UEFI Forum | 2026-08-19 | Current ACPI model, tables, AML, events and power interfaces | https://uefi.org/specs/ACPI/6.6/ | Specification terms; no code copied |
 | UEFI Forum | 2026-08-19 | UEFI boot/runtime transition, configuration tables and serial/debug protocols | https://uefi.org/specs/UEFI/2.11/ | Specification terms; no code copied |
-| MSI / ASUS | 2026-08-19 | Q470E UEFI, COM/debug, TPM, storage and Intel NIC facts | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual facts only |
+| MSI / ASUS | 2026-08-19 | Q470E UEFI, COM/debug, TPM, storage and Intel NIC facts; reviewed MSI English manual dated 2023-01-31 | https://ipc.msi.com/product_download/Industrial-Motherboard/ATX/MS-98N9 | Manual facts only |
 | ASUS | 2026-08-19 | B550 fallback UEFI, COM/LPC debug and TPM facts | https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/ | Product facts only |
 | uACPI project | 2026-08-19 | Portable AML/table/event/sleep/resource implementation and host API | https://github.com/uACPI/uACPI | MIT; candidate dependency, pin/review required |
 | ACPICA project / Intel | 2026-08-19 | Mature OS-independent implementation and evaluated releases | https://github.com/open-acpica/acpica | Intel/simplified-BSD/GPLv2 alternatives plus exceptions; exact-file legal review required |

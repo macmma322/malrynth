@@ -93,7 +93,7 @@ HDMI 2.2 is current and its full specification is obtained through the HDMI Adop
 
 **OPEN-SOURCE IMPLEMENTATION EVIDENCE:** Linux has separate Intel SOF HDA code that maps a DSP BAR, loads firmware, scans SoundWire/ACPI topology and supports a DSP-less mode; the file is dual `GPL-2.0-only OR BSD-3-Clause` ([Linux SOF Intel HDA](https://github.com/torvalds/linux/blob/master/sound/soc/sof/intel/hda.c)). Board configuration also distinguishes DSP/I2S/DMIC/SoundWire machine drivers ([Linux Intel audio boards](https://github.com/torvalds/linux/blob/master/sound/soc/intel/boards/Kconfig)).
 
-**INFERENCE:** successful HDA PCI enumeration on a recent laptop may yield HDMI only or no usable internal speaker/mic route. Therefore select a conventional desktop HDA codec for first physical acceptance and list DSP/SoundWire laptops as unsupported until firmware, ACPI topology, machine routing and microphone privacy are implemented.
+**INFERENCE:** successful HDA PCI enumeration on a recent laptop may yield HDMI only or no usable internal speaker/mic route. When physical HDA is admitted after the UAC1 path, select a conventional desktop codec as its first acceptance target and list DSP/SoundWire laptops as unsupported until firmware, ACPI topology, machine routing and microphone privacy are implemented.
 
 ## Professional-audio implications
 

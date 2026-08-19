@@ -22,7 +22,7 @@ Initial graphics means firmware GOP framebuffer only. Native acceleration is not
 - **INFERENCE**: a conclusion drawn from the preceding evidence.
 - **PROPOSED MALRYNTH DECISION**: a recommendation for later founder/architecture review.
 
-Every decision document uses these labels where the distinction matters. [SOURCES.md](SOURCES.md) maps major claims to sources, authority, access date, and code-license relevance.
+The evidence-heavy component reports use these labels explicitly; compact matrices and governance tables inherit the cited findings they summarize. [SOURCES.md](SOURCES.md) maps major claims to sources, authority, access date, and code-license relevance.
 
 ## R0 support profile
 

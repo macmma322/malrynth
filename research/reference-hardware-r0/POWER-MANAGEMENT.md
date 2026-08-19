@@ -159,7 +159,7 @@ versus-latency intent. Vendor-specific register semantics stay in backends.
 **OFFICIAL FACT:** The i5-10500TE page advertises thermal-monitoring technologies; the MSI
 Q470E and ASUS B550 boards provide firmware monitoring/fan features.
 [Intel i5-10500TE](https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html),
-[MSI Q470E manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf)
+[MSI Q470E downloads/manual index](https://ipc.msi.com/product_download/Industrial-Motherboard/ATX/MS-98N9)
 
 **PROPOSED MALRYNTH DECISION:** R0 leaves firmware fan curves and CPU hardware thermal
 protection enabled. It logs architectural thermal status/throttling when documented, checks
@@ -230,5 +230,5 @@ Adopt only the R0 idle/shutdown/reboot acceptance gates and typed power-policy b
 | AMD | 2026-08-19 | AMD system/performance programming model | https://docs.amd.com/v/u/en-US/24593_3.44_APM_Vol2 | Specification agreement; no code copied |
 | Linux kernel project | 2026-08-19 | Working amd-pstate/CPPC behavior | https://docs.kernel.org/admin-guide/pm/amd-pstate.html | GPL-2.0-family ecosystem; evidence only |
 | Linux kernel project | 2026-08-19 | Working Intel pstate/HWP behavior | https://docs.kernel.org/admin-guide/pm/intel_pstate.html | GPL-2.0-family ecosystem; evidence only |
-| MSI / ASUS | 2026-08-19 | Reference-board ACPI/monitoring/firmware facts | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual/product facts only |
+| MSI / ASUS | 2026-08-19 | Reference-board ACPI/monitoring/firmware facts; reviewed MSI English manual dated 2023-01-31 | https://ipc.msi.com/product_download/Industrial-Motherboard/ATX/MS-98N9 | Manual/product facts only |
 | OSDev community | 2026-08-19 | Warning against partial hard-coded ACPI shutdown | https://wiki.osdev.org/Shutdown | Community evidence; no code copied |

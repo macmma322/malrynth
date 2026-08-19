@@ -4,13 +4,21 @@
 
 The future database records evidence for exact hardware and firmware revisions. It must distinguish `investigated`, `boots`, `driver-probed`, `passes-profile`, and `certified`; it must never convert “Linux supports it” into “Malrynth supports it.”
 
-`INVESTIGATED-HARDWARE.json` is a small seed using this schema. It contains only devices examined for this report or present in the read-only host inventory.
+`INVESTIGATED-HARDWARE.json` is a small research seed using this schema. It contains only devices examined for this report or present in the read-only host inventory. Its `test` objects record completion of inventory or document review; they are not qualification records or Malrynth support claims.
 
-## Top-level record
+## Dataset wrapper
 
 | Field | Type | Meaning |
 |---|---|---|
 | `schema_version` | string | schema compatibility, initially `0.1.0` |
+| `generated` | date | date this research snapshot was generated |
+| `status_notice` | string | mandatory warning that investigated is not supported or certified |
+| `records` | array | investigated device/system records described below |
+
+## Device record
+
+| Field | Type | Meaning |
+|---|---|---|
 | `record_id` | string | stable Malrynth identifier; not a product name |
 | `kind` | enum | `system`, `motherboard`, `cpu`, `pci`, `usb`, `storage`, `firmware`, `adapter` |
 | `vendor`, `product`, `marketing_family` | strings | names exactly as observed and broader family |
@@ -82,7 +90,9 @@ investigated
 
 States may regress when firmware, driver, or test profile changes. `reference-supported` is scoped to exact identity plus minimum/maximum tested firmware, not a marketing family.
 
-## Test record
+## Qualification test record (future)
+
+The following fields are required when a record claims a Malrynth test-profile result such as `boots`, `basic-io`, `profile-passed`, or `reference-supported`. Research-only seed records may instead use the preliminary fields `profile`, `state`, `date`, nullable `malrynth_build`, and `results`; `state: complete` there means only that the named inventory or document review finished.
 
 Required fields:
 

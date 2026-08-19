@@ -88,7 +88,7 @@ Reject or defer a board if its manual, block diagram, or read-only inventory can
 - **R0 — controlled desktop:** exact Q470E/Intel specimen; GOP, serial, ACPI basics, SMP/timer, PCI, IOMMU discovery, NVMe, xHCI/HID, and I210-class Ethernet.
 - **R1 — second desktop platform:** qualify AMD B550/AM4; enable IOMMU translation/DMA confinement; add USB mass storage and USB Audio Class.
 - **R2 — graphics expansion:** one selected AMD family for the committed acceleration program; a bounded UHD 630 display experiment may run earlier without becoming an R0 gate; retain GOP recovery.
-- **R3 — wireless peripherals:** one replaceable conventional PCIe Intel Wi-Fi family plus USB Bluetooth transport; Wi-Fi client mode and BT HID precede audio profiles.
+- **R3 — wireless peripherals:** use replaceable conventional PCIe radios only. An ath9k AR9280/AR9380-class adapter is the bounded first native-driver research target; an Intel AX200/AX210-class adapter is the modern Linux-domain interoperability target. Select any supported family only after regulatory, firmware, EEPROM/calibration and redistribution gates pass. USB Bluetooth HCI/HID precedes audio profiles.
 - **R4 — first laptop reference:** a deliberately selected business laptop with one GPU, replaceable Wi-Fi, and no essential vendor daemon.
 - **R5 — broader qualification:** multiple boards/revisions, storage/NIC diversity, suspend/resume, performance, failure recovery, and a future certification process.
 

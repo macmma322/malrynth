@@ -93,7 +93,7 @@ UHD 630, VT-x/EPT and VT-d; the exact board CPU list remains controlling.
 **OFFICIAL FACT:** MSI documents MS-98N9 Q470E with I210-AT + I219LM, chipset USB,
 NVMe-capable M.2, LPC/SPI debug and a 16550A-compatible UART. ASUS documents Q470EI-IM-A
 with Q470E, I210-AT + I219LM, five COM ports, M.2, TPM, LPC debug, xHCI hand-off and VT-d.
-[MSI manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf),
+[MSI downloads/manual index](https://ipc.msi.com/product_download/Industrial-Motherboard/ATX/MS-98N9),
 [ASUS manual](https://dlcdnets.asus.com/pub/ASUS/mb/Embedded_IPC/Q470EI-IM-A/E21947_Q470EI-IM-A_UM_v5_WEB.pdf?model=Q470EI-IM-A)
 
 **INFERENCE:** MSI is the stronger debug oracle because its reviewed manual explicitly
@@ -131,7 +131,7 @@ that firmware will expose Intel PTT or that either TPM path is correctly provisi
 
 **OFFICIAL FACT:** AMD identifies Ryzen 5 5600G as a Zen 3/Cezanne, six-core/twelve-thread,
 65 W AM4 processor with integrated Radeon graphics and PCIe Gen 3. The official AM4 chipset
-matrix lists Ryzen 5000 support on B550. [AMD Ryzen consumer guide](https://www.amd.com/content/dam/amd/en/documents/partner-hub/ryzen/amd-consumer-pocket-guide-ryzen-radeon-july-2024.pdf),
+matrix lists Ryzen 5000 support on B550. [AMD Ryzen 5 5600G specifications](https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-5000-series/amd-ryzen-5-5600g.html),
 [AMD AM4 chipsets](https://www.amd.com/en/products/processors/chipsets/am4.html)
 
 **OFFICIAL FACT:** ASUS lists Pro B550M-C/CSM with a B550 chipset, onboard TPM 2.0 IC, one
@@ -330,7 +330,7 @@ configuration interfaces.
 The Coffee Lake/Q370 side is PCIe 3.0; although B550 can expose PCIe 4.0 with some processors,
 the 5600G is a PCIe 3.0 processor. Board slot shape is therefore not proof of electrical
 width, link generation, isolation or IOMMU ownership. [Intel i5-9500](https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html),
-[AMD Ryzen consumer guide](https://www.amd.com/content/dam/amd/en/documents/partner-hub/ryzen/amd-consumer-pocket-guide-ryzen-radeon-july-2024.pdf)
+[AMD Ryzen 5 5600G specifications](https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-5000-series/amd-ryzen-5-5600g.html)
 
 **PROPOSED MALRYNTH DECISION:** Enumerate PCI domains, root bridges, bus ranges, and resource
 windows from firmware. Use ECAM only for validated MCFG segments/bus ranges; retain a
@@ -418,12 +418,12 @@ artifacts with separate restrictive redistribution terms and are not included he
 |---|---|---|---|---|
 | Intel | 2026-08-19 | i5-10500TE 6C/12T, UHD 630, VT-x/EPT/VT-d and power features | https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html | Product facts only |
 | Intel | 2026-08-19 | Q470E VT-d, PTT, PCIe and USB platform facts | https://www.intel.com/content/www/us/en/products/sku/203700/intel-q470e-chipset/specifications.html | Product facts only |
-| MSI / ASUS | 2026-08-19 | Q470E UART, debug, Intel NIC, M.2, TPM and firmware controls | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual facts only |
+| MSI / ASUS | 2026-08-19 | Q470E UART, debug, Intel NIC, M.2, TPM and firmware controls; reviewed MSI English manual dated 2023-01-31 | https://ipc.msi.com/product_download/Industrial-Motherboard/ATX/MS-98N9 | Manual facts only |
 | Intel | 2026-08-19 | i5-9500: 6C/6T, 65 W, UHD 630, PCIe 3.0, VT-x/EPT/VT-d, idle and thermal features; lifecycle | https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html | Product facts only |
 | Intel | 2026-08-19 | i5-8500 same-shape fallback facts and lifecycle | https://www.intel.com/content/www/us/en/products/sku/129939/intel-core-i58500-processor-9m-cache-up-to-4-10-ghz/specifications.html | Product facts only |
 | Intel | 2026-08-19 | Q370 VT-d, PTT, vPro eligibility, chipset lanes and lack of ECC | https://www.intel.com/content/www/us/en/products/sku/133282/intel-q370-chipset/specifications.html | Product facts only |
 | ASUS | 2026-08-19 | Q370 board CPU support, I219-LM, COM/LPC debug/speaker, onboard TPM, storage, AMI UEFI/ACPI 6.1 | https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf | Manual facts; no text/code copied |
-| AMD | 2026-08-19 | Ryzen 5 5600G 6C/12T, Zen 3, 65 W, iGPU and PCIe 3.0 | https://www.amd.com/content/dam/amd/en/documents/partner-hub/ryzen/amd-consumer-pocket-guide-ryzen-radeon-july-2024.pdf | Product facts only |
+| AMD | 2026-08-19 | Ryzen 5 5600G 6C/12T, Zen 3, 65 W, iGPU and PCIe 3.0 | https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-5000-series/amd-ryzen-5-5600g.html | Product facts only |
 | AMD | 2026-08-19 | B550/Ryzen 5000 compatibility and chipset lane classes | https://www.amd.com/en/products/processors/chipsets/am4.html | Product facts only |
 | ASUS | 2026-08-19 | B550 board COM/LPC debug/speaker, onboard TPM2, storage, AMI UEFI and RTL8111H | https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/ | Product facts only |
 | MSI | 2026-08-19 | B550 alternative COM, TPM header, debug LEDs, storage and RTL8111H | https://www.msi.com/Motherboard/PRO-B550M-P/Specification | Product facts only |
