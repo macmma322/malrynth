@@ -12,12 +12,13 @@ the board documentation explicitly specifies TTL levels). Mirror progress to GOP
 or LEDs where available. A USB serial adapter is useful only after xHCI and USB enumeration,
 so it cannot be the sole earliest-boot path.
 
-The selected ASUS PRIME Q370M-C/CSM exposes two internal COM headers, an internal speaker and
-an ASUS LPC debug-card header. This makes it the strongest investigated first debug specimen:
-COM1 can remain the failure console while COM2 is reserved for a later debugger. ASUS Pro
-B550M-C/CSM retains one COM header, speaker and LPC debug as the cross-vendor fallback.
-Neither marketing label establishes UART base, clock, interrupt or electrical path; qualify
-those on the exact board/firmware and bracket.
+The primary MSI MS-98N9 Q470E manual explicitly documents 16550A-compatible UARTs plus
+debug headers, making it the strongest canonical debug specimen. ASUS Q470EI-IM-A exposes
+multiple COM ports but still needs exact UART qualification. On the used-market path, ASUS
+PRIME Q370M-C/CSM exposes two internal COM headers, a speaker and LPC debug-card header, so
+COM1 can remain the failure console while COM2 is reserved for a later debugger. Neither a
+marketing label nor a connector alone establishes base, clock, interrupt or electrical path;
+qualify those on the exact board/firmware and bracket.
 
 ## Evidence labels
 
@@ -202,6 +203,7 @@ the hardware record, not general architecture.
 |---|---|---|---|---|
 | UEFI Forum | 2026-08-19 | Serial, Debugport and GOP boot interfaces | https://uefi.org/specs/UEFI/2.11/ | Specification; no code copied |
 | UEFI Forum | 2026-08-19 | SPCR/DBG2 and ACPI platform description | https://uefi.org/specs/ACPI/6.6/ | Specification; no code copied |
+| MSI | 2026-08-19 | Q470E board documents 16550A UARTs and hardware debug surfaces | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual facts only |
 | ASUS | 2026-08-19 | Q370 two COM headers, speaker and vendor-specific LPC debug header/card | https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf | Manual facts only |
 | ASUS | 2026-08-19 | B550 COM/LPC debug/speaker availability | https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/ | Product facts only |
 | MSI | 2026-08-19 | Budget B550 COM and debug-LED facilities | https://www.msi.com/Motherboard/PRO-B550M-P/Specification | Product facts only |

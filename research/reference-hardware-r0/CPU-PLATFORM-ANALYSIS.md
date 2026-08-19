@@ -24,26 +24,29 @@ AMD/Intel physical diversity.
 **PROPOSED MALRYNTH DECISION:** Keep QEMU q35/OVMF as the deterministic virtual reference,
 then qualify physical hardware in this order:
 
-1. **Primary:** Intel Coffee Lake-S, specifically a non-`F` Core i5-9500 (or i5-8500
-   substitute), on an Intel Q370 commercial micro-ATX board. The concrete first specimen is
-   **ASUS PRIME Q370M-C/CSM**.
-2. **Cross-vendor fallback:** AMD Ryzen 5000G, specifically Ryzen 5 5600G, on a B550
-   commercial micro-ATX board. Prefer **ASUS Pro B550M-C/CSM**; retain **MSI PRO B550M-P** as
-   the lower-observability alternative.
+1. **Primary family:** Intel Comet Lake-S/Embedded, specifically a non-`F`
+   i5-10500/10500E/10500TE-class six-core CPU, on Q470/Q470E. The strongest documented first
+   specimen is **MSI MS-98N9 Q470E**; **ASUS Q470EI-IM-A** is a compact alternative after
+   exact UART qualification.
+2. **Used-market Intel alternative:** Coffee Lake-S/Q370 with a non-`F` i5-9500/i5-8500,
+   preferably **Supermicro X11SCQ** or ASUS PRIME Q370M-C/CSM plus a verified I210 adapter.
+3. **Cross-vendor fallback:** AMD Ryzen 5000G, specifically Ryzen 5 5600G/PRO 5650G, on a
+   B550 business micro-ATX board. Prefer **ASUS Pro B550M-C/CSM**; retain ASRock B550M Pro4
+   as a lower-cost alternative whose ASMedia-hub ports are excluded from first USB tests.
 
 These are qualification candidates, not a claim of generic family support. Record exact
 board revision, firmware build, CPU stepping/microcode, DIMMs, storage and firmware tables.
 
-**INFERENCE:** Q370/Coffee Lake is older and less capable than a current enthusiast system,
-but unusually suitable for first silicon: all six cores are homogeneous; the CPU has an
-iGPU; the commercial board has documented serial, POST/debug and TPM surfaces; and the
-platform predates hybrid-core scheduling. This lowers bring-up ambiguity while still
-exercising UEFI, ACPI, SMP, PCIe and a real VT-d implementation.
+**INFERENCE:** Q470E/Comet Lake-S is older and less capable than a current enthusiast system,
+but unusually suitable for first silicon: all six cores are homogeneous; non-`F` CPUs have
+an iGPU; industrial candidates expose serial/debug, Intel Ethernet, TPM and ordinary NVMe/
+USB; and the platform predates hybrid-core scheduling. This lowers bring-up ambiguity while
+still exercising UEFI, ACPI, SMP, PCIe and a real VT-d implementation.
 
-**INFERENCE:** The chief challenge is lifecycle, not architecture. Intel marks both CPUs
-discontinued, and Q370 inventory is likely used or new-old-stock. Buy at least one spare
-board, photograph revision labels, archive the exact firmware and do not make replacement
-availability an unstated certification assumption.
+**INFERENCE:** The chief challenge is acquisition cost and lifecycle, not architecture.
+Q470E industrial boards may be expensive even while firmware remains available; Q370 stock
+is likely used or new-old-stock. Freeze revision labels and exact firmware. This research
+authorizes no purchase or spare-board acquisition.
 
 ## Why desktop first
 
@@ -67,19 +70,37 @@ breadth begins only after the reference pair passes deterministic conformance te
 
 | Priority | CPU/platform family | Concrete CPU | Board/chipset class | Concrete board | Why it belongs | Qualification risks |
 |---|---|---|---|---|---|---|
-| 1 | Intel Coffee Lake-S, 8th/9th generation | Core i5-9500; i5-8500 substitute | Q370 commercial mATX | ASUS PRIME Q370M-C/CSM | Homogeneous 6-core, iGPU, VT-d; two COM headers, LPC debug, speaker, onboard TPM, dual M.2, I219-LM | Discontinued stock; board-specific debug card; no ECC; header-to-DE-9 parts needed |
-| 2 | AMD Cezanne/Ryzen 5000G | Ryzen 5 5600G | B550 commercial mATX | ASUS Pro B550M-C/CSM | Homogeneous 6C/12T, iGPU; COM, LPC debug, speaker, onboard TPM2, dual M.2 | Realtek NIC; one UART; exact IVRS/isolation must be measured; CPU links are PCIe 3.0 |
-| 3 | AMD Cezanne/Ryzen 5000G | Ryzen 5 5600G | B550 value mATX | MSI PRO B550M-P | COM, four debug LEDs, dual M.2, TPM header | TPM module not included; no claimed general LPC debug header; Realtek NIC; less pre-kernel visibility |
+| 1 | Intel Comet Lake-S/Embedded, 10th generation | Core i5-10500/10500E/10500TE-class | Q470E industrial ATX/mini-ITX | MSI MS-98N9 Q470E; ASUS Q470EI-IM-A | Homogeneous cores, iGPU, VT-d; onboard I210-AT + I219LM, serial/debug, TPM and M.2 | Industrial price/availability; freeze exact SKU; ASUS manual does not explicitly prove 16550 compatibility |
+| 2 | Intel Coffee Lake-S, 8th/9th generation | Core i5-9500; i5-8500 substitute | Q370 commercial/industrial | Supermicro X11SCQ or ASUS PRIME Q370M-C/CSM + I210 | Used-market cost path; homogeneous cores/iGPU; X11SCQ explicitly documents 16550 and I210 | Older stock; exact firmware/revision; ASUS needs I210 and UART qualification |
+| 3 | AMD Cezanne/Ryzen 5000G | Ryzen 5 5600G/PRO 5650G | B550 business mATX | ASUS Pro B550M-C/CSM | Homogeneous 6C/12T, iGPU; COM, LPC debug, speaker, onboard TPM2, dual M.2 | Realtek NIC; exact IVRS/isolation and UART must be measured; CPU links are PCIe 3.0 |
+| 4 | AMD Cezanne/Ryzen 5000G | Ryzen 5 5600G | B550 value mATX | ASRock B550M Pro4 | Documented COM/TPM headers, M.2 and expansion | Realtek NIC; some rear USB ports sit behind ASM1074; lower pre-kernel observability |
 
-**PROPOSED MALRYNTH DECISION:** Qualify a *family contract* first (Coffee Lake-S/Q370), but
-freeze one exact specimen as the oracle. The i5-8500 is a same-shape fallback, not permission
-to claim all 8th/9th-generation CPUs. Exclude `F`-suffix processors because they remove the
-iGPU; exclude Pentium/Celeron parts because they reduce SMP coverage; exclude Xeon/ECC as a
-first-platform expansion.
+**PROPOSED MALRYNTH DECISION:** Qualify the Comet Lake-S/Q470E family contract first, but
+freeze one exact specimen as the oracle. Q370 is an acquisition fallback, not permission to
+claim both generations supported. Exclude `F`-suffix processors because they remove the iGPU;
+exclude Pentium/Celeron parts because they reduce SMP coverage; exclude Xeon/ECC initially.
 
 ## Candidate platform facts
 
-### Intel primary: Q370
+### Intel primary: Q470E
+
+**OFFICIAL FACT:** Intel lists Q470E with VT-d, Intel PTT, 24 PCH PCIe 3.0 lanes, USB and
+SATA capabilities. The i5-10500TE is a six-core/twelve-thread Comet Lake-S Embedded part with
+UHD 630, VT-x/EPT and VT-d; the exact board CPU list remains controlling.
+[Q470E chipset](https://www.intel.com/content/www/us/en/products/sku/203700/intel-q470e-chipset/specifications.html),
+[Core i5-10500TE](https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html)
+
+**OFFICIAL FACT:** MSI documents MS-98N9 Q470E with I210-AT + I219LM, chipset USB,
+NVMe-capable M.2, LPC/SPI debug and a 16550A-compatible UART. ASUS documents Q470EI-IM-A
+with Q470E, I210-AT + I219LM, five COM ports, M.2, TPM, LPC debug, xHCI hand-off and VT-d.
+[MSI manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf),
+[ASUS manual](https://dlcdnets.asus.com/pub/ASUS/mb/Embedded_IPC/Q470EI-IM-A/E21947_Q470EI-IM-A_UM_v5_WEB.pdf?model=Q470EI-IM-A)
+
+**INFERENCE:** MSI is the stronger debug oracle because its reviewed manual explicitly
+states UART compatibility. ASUS is smaller but its UART implementation must be identified
+rather than inferred from “COM.”
+
+### Intel used-market alternative: Q370
 
 **OFFICIAL FACT:** Intel lists the
 [Core i5-9500](https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html)
@@ -101,7 +122,7 @@ LPC debug-card header, an onboard TPM 2.0 IC, two M.2 storage sockets, six SATA 
 UEFI and ACPI 6.1. [Board manual](https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf),
 [ASUS specifications](https://www.asus.com/us/motherboards-components/motherboards/prime/prime-q370m-c-csm/techspec/)
 
-**INFERENCE:** This is a useful cost alternative, but three marketing traps must stay
+**INFERENCE:** Q370 is a useful cost alternative, but three marketing traps must stay
 explicit: the COM ports are internal headers rather than rear DE-9 connectors; LPC debug
 requires ASUS's compatible card; and “TPM IC onboard” is a discrete board device, not proof
 that firmware will expose Intel PTT or that either TPM path is correctly provisioned.
@@ -137,9 +158,8 @@ cryptographic behavior; the PC Client Platform TPM Profile constrains how a PC p
 implements and exposes that TPM. [TCG TPM 2.0 Library](https://trustedcomputinggroup.org/resource/tpm-library-specification/),
 [TCG PC Client profile](https://trustedcomputinggroup.org/resource/pc-client-platform-tpm-profile-ptp-specification/)
 
-**OFFICIAL FACT:** Q370 advertises Intel PTT capability, while the investigated ASUS Q370
-and B550 board
-specifications advertise an onboard TPM 2.0 IC. These are distinct implementation options.
+**OFFICIAL FACT:** Q470E and Q370 advertise Intel PTT capability, while investigated boards
+also expose onboard or header-based TPM 2.0 options. These are distinct implementations.
 The operating system must discover the active interface through UEFI/ACPI/TCG mechanisms;
 it must not choose a transport from a chipset name.
 
@@ -396,6 +416,9 @@ artifacts with separate restrictive redistribution terms and are not included he
 
 | Authority | Accessed | Claim contributed | URL | Licensing relevance |
 |---|---|---|---|---|
+| Intel | 2026-08-19 | i5-10500TE 6C/12T, UHD 630, VT-x/EPT/VT-d and power features | https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html | Product facts only |
+| Intel | 2026-08-19 | Q470E VT-d, PTT, PCIe and USB platform facts | https://www.intel.com/content/www/us/en/products/sku/203700/intel-q470e-chipset/specifications.html | Product facts only |
+| MSI / ASUS | 2026-08-19 | Q470E UART, debug, Intel NIC, M.2, TPM and firmware controls | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual facts only |
 | Intel | 2026-08-19 | i5-9500: 6C/6T, 65 W, UHD 630, PCIe 3.0, VT-x/EPT/VT-d, idle and thermal features; lifecycle | https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html | Product facts only |
 | Intel | 2026-08-19 | i5-8500 same-shape fallback facts and lifecycle | https://www.intel.com/content/www/us/en/products/sku/129939/intel-core-i58500-processor-9m-cache-up-to-4-10-ghz/specifications.html | Product facts only |
 | Intel | 2026-08-19 | Q370 VT-d, PTT, vPro eligibility, chipset lanes and lack of ECC | https://www.intel.com/content/www/us/en/products/sku/133282/intel-q370-chipset/specifications.html | Product facts only |

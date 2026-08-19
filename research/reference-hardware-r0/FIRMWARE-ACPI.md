@@ -1,7 +1,7 @@
 # Firmware and ACPI contract for MALRYNTH R0
 
 **Status:** desktop-first firmware research, 2026-08-19.
-**Physical oracle:** ASUS PRIME Q370M-C/CSM (advertised AMI UEFI and ACPI 6.1).
+**Primary physical oracle:** MSI MS-98N9 Q470E; ASUS Q470EI-IM-A is a compact alternative.
 **Compatibility target:** revision-tolerant parsing for the portions of ACPI 6.6 Malrynth uses.
 
 ## Evidence labels
@@ -158,9 +158,12 @@ masked and logged. AML never executes in interrupt context.
 ## Serial discovery strategy
 
 **OFFICIAL FACT:** UEFI defines Serial I/O and Debugport protocols; ACPI defines SPCR/DBG2
-descriptions. The selected Q370 board has two internal COM headers, not rear DE-9 ports.
+descriptions. The selected MSI Q470E board documents rear/header serial options and a
+16550A-compatible UART; the ASUS Q470E alternative exposes COM headers but still needs exact
+UART qualification.
 [UEFI 2.11](https://uefi.org/specs/UEFI/2.11/),
-[ASUS Q370 manual](https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf)
+[MSI Q470E manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf),
+[ASUS Q470E manual](https://dlcdnets.asus.com/pub/ASUS/mb/Embedded_IPC/Q470EI-IM-A/E21947_Q470EI-IM-A_UM_v5_WEB.pdf?model=Q470EI-IM-A)
 
 **PROPOSED MALRYNTH DECISION:** Use three phases:
 
@@ -174,9 +177,12 @@ Never infer RS-232 voltage, I/O base, IRQ or clock merely from a â€œCOM headerâ€
 
 ## Exact-board capture and acceptance
 
-**OFFICIAL FACT:** ASUS declares AMI UEFI, ACPI 6.1, two COM headers, LPC debug, onboard TPM
-2.0 and I219-LM for PRIME Q370M-C/CSM. ASUS declares AMI UEFI, COM/LPC debug and onboard TPM2
-for Pro B550M-C/CSM. [Q370 manual](https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf),
+**OFFICIAL FACT:** MSI documents MS-98N9 Q470E with AMI UEFI, 16550A serial, debug headers,
+I210-AT plus I219LM, TPM and M.2. ASUS documents Q470EI-IM-A with Q470E, five COM ports,
+LPC debug, TPM, M.2 and I210-AT plus I219LM. ASUS declares AMI UEFI, COM/LPC debug and
+onboard TPM2 for Pro B550M-C/CSM.
+[MSI Q470E manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf),
+[ASUS Q470E manual](https://dlcdnets.asus.com/pub/ASUS/mb/Embedded_IPC/Q470EI-IM-A/E21947_Q470EI-IM-A_UM_v5_WEB.pdf?model=Q470EI-IM-A),
 [B550 specifications](https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/)
 
 For each board revision and firmware build archive firmware image URL/hash and release notes;
@@ -186,7 +192,7 @@ firmware recovery procedure. Any firmware update is a new platform revision.
 
 | Area | Pass condition |
 |---|---|
-| Parser | Captured Q370/B550 plus malformed corpus runs with ASan/UBSan/fuzzing and no OOB, leak or hang. |
+| Parser | Captured Q470E/B550 plus malformed corpus runs with ASan/UBSan/fuzzing and no OOB, leak or hang. |
 | Determinism | Frozen firmware yields identical normalized tables across cold boots except classified volatile fields. |
 | AML | Namespace loads; bounded `_STA`/`_CRS` results agree with an independent host-side implementation. |
 | PCI routing | ACPI route data and exercised interrupt configuration agree. |
@@ -209,7 +215,7 @@ failure returns to firmware or halts rather than entering with ambiguous ownersh
 |---|---|---|---|---|
 | UEFI Forum | 2026-08-19 | Current ACPI model, tables, AML, events and power interfaces | https://uefi.org/specs/ACPI/6.6/ | Specification terms; no code copied |
 | UEFI Forum | 2026-08-19 | UEFI boot/runtime transition, configuration tables and serial/debug protocols | https://uefi.org/specs/UEFI/2.11/ | Specification terms; no code copied |
-| ASUS | 2026-08-19 | Q370 AMI UEFI/ACPI 6.1, COM/LPC debug, TPM and I219-LM | https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf | Manual facts only |
+| MSI / ASUS | 2026-08-19 | Q470E UEFI, COM/debug, TPM, storage and Intel NIC facts | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual facts only |
 | ASUS | 2026-08-19 | B550 fallback UEFI, COM/LPC debug and TPM facts | https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/ | Product facts only |
 | uACPI project | 2026-08-19 | Portable AML/table/event/sleep/resource implementation and host API | https://github.com/uACPI/uACPI | MIT; candidate dependency, pin/review required |
 | ACPICA project / Intel | 2026-08-19 | Mature OS-independent implementation and evaluated releases | https://github.com/open-acpica/acpica | Intel/simplified-BSD/GPLv2 alternatives plus exceptions; exact-file legal review required |

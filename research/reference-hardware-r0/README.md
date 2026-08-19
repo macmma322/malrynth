@@ -8,11 +8,11 @@ This directory evaluates a controlled physical x86-64 engineering target for mov
 
 ## Executive result
 
-The proposed primary family is **INTEL-FIRST**: a non-`F`, homogeneous 8th/9th-generation Core i5 desktop CPU with UHD 630 on a Q370 commercial motherboard. The first specimen should be an ASUS PRIME Q370M-C/CSM with an add-in Intel I210/I211/I350 NIC, or an equivalent board that passes the same property checklist. This combination is old enough to be inexpensive on the used market, yet exposes UEFI/ACPI, VT-d, two COM headers, LPC debug, TPM 2.0, ordinary M.2 NVMe, direct chipset xHCI, and integrated GOP display. Q470E industrial boards remain cleaner newer alternatives when available at a sensible cost; they are not required to begin.
+The proposed primary family is **INTEL-FIRST**: a non-`F`, homogeneous 10th-generation Core i5 desktop/embedded CPU with UHD 630 on Q470/Q470E. The strongest investigated first specimen is MSI MS-98N9 Q470E because its manual explicitly documents a 16550A UART, I210-AT plus I219LM Ethernet, M.2 NVMe, chipset USB, debug headers, and AMI UEFI. ASUS Q470EI-IM-A is a compact alternative after exact UART qualification. Coffee Lake/Q370 remains the used-market acquisition fallback, not a second support claim.
 
 The fallback family is AMD AM4 B550 with a Ryzen 5 5600G/PRO 5650G-class APU. ASUS Pro B550M-C/CSM is the preferred investigated business-board example: AMI UEFI, current vendor firmware support, APU display output, COM and LPC debug headers, onboard TPM 2.0, NVMe and conventional expansion. Its onboard RTL8111H is not the preferred first-driver target; add an Intel I210/I211/I350 PCIe NIC and qualify the exact physical USB-port topology. ASRock B550M Pro4 remains a lower-cost candidate if its downstream ASMedia hub is kept outside first xHCI tests.
 
-Initial graphics means firmware GOP framebuffer only. Native acceleration is not an R0 gate. For the exact R0 problem the feasibility rank is **Intel, AMD, NVIDIA**: Intel has the strongest target-specific non-Linux evidence for this generation, AMD has the strongest broad long-term open implementation seams, and NVIDIA remains firmware/vendor-stack dependent. See [GPU-FEASIBILITY.md](GPU-FEASIBILITY.md).
+Initial graphics means firmware GOP framebuffer only. Native acceleration is not an R0 gate. The R0 *platform* order is **Intel, AMD, NVIDIA** because Intel supplies display without an added device. The future committed *native-acceleration* order is **AMD, Intel, NVIDIA** because AMD has the strongest broad open implementation seams; NVIDIA remains firmware/vendor-stack dependent. See [GPU-FEASIBILITY.md](GPU-FEASIBILITY.md).
 
 ## Evidence vocabulary
 

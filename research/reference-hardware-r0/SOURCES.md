@@ -1,90 +1,110 @@
-# Sources
+# Sources and Evidence Ledger
 
-Access date for every web source: **2026-08-19**. Each row maps an authority to the conclusion it supports. Product pages and specifications are factual design references, not source-code licenses. “Licensing relevance” is an engineering flag, not legal advice; any implementation reuse still needs an exact-file and exact-version review.
-
-## Local inventory
-
-| Source / authority | Relevant claim | URL / reference | Licensing relevance |
-|---|---|---|---|
-| Local Linux read-only inventory | Acer Nitro AN515-52 identity; i7-8750H; Intel UHD 630 `8086:3e9b`; NVIDIA GP107M `10de:1c8c`; Intel xHCI `8086:a36d`; Intel CNVi `8086:a370`; Samsung NVMe `144d:a808`; Realtek Ethernet `10ec:8168`; Intel USB Bluetooth `8087:0aaa`; UEFI variables and IOMMU groups visible | Commands run without `sudo`: `lscpu`, `lspci -nn`, `lsusb`, `lsblk`, `ip -brief link`; readable `/sys/class/dmi/id`, `/sys/class/drm`, `/sys/kernel/iommu_groups`, `/sys/firmware/efi`, and `/proc/cmdline`. Unprivileged `dmidecode` was denied. | Local observations only; serial numbers, MAC addresses and storage UUIDs are intentionally omitted. This is not a Malrynth driver test. |
-
-## Architecture, firmware, IOMMU and security
-
-| Source / authority | Relevant claim | URL / reference | Licensing relevance |
-|---|---|---|---|
-| Intel — Intel 64 and IA-32 SDM | x86-64 system programming, APIC/x2APIC, SMP, TSC/timers, VMX, MSRs and power mechanisms | [Intel SDM](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html) | Proprietary documentation; implement from the architecture, no code copied. |
-| AMD — AMD64 Architecture Programmer's Manual | AMD64 system programming, interrupt, time and SVM model | [AMD APM](https://docs.amd.com/v/u/en-US/40332_4.09_APM_PUB) | AMD Public Use document; reference under its terms. |
-| UEFI Forum — UEFI 2.11 | GOP framebuffer metadata and the `ExitBootServices` lifetime boundary | [UEFI 2.11](https://uefi.org/specs/UEFI/2.11/) | UEFI Forum specification/adopter terms apply. |
-| UEFI Forum — ACPI 6.6 | RSDP/XSDT, MADT, MCFG, FADT, HPET, DMAR/IVRS-related discovery, AML and sleep/reset interfaces | [ACPI 6.6](https://uefi.org/specs/ACPI/6.6/) | UEFI Forum specification/adopter terms apply. |
-| PCI-SIG | PCI Express configuration/capability model and firmware interaction references | [PCIe specifications overview](https://pcisig.com/specification-overview/pci-express-base), [PCI firmware](https://pcisig.com/specification-overview/pci-firmware) | PCI-SIG access/adopter terms apply; no specification text copied. |
-| Intel — VT-d Architecture Specification | DMA translation, invalidation, reserved regions and interrupt remapping | [Intel VT-d](https://www.intel.com/content/www/us/en/content-details/868911/intel-virtualization-technology-for-directed-i-o-architecture-specification.html) | Architectural reference only. |
-| AMD — I/O Virtualization Technology Specification | AMD IOMMU programming and IVRS interpretation | [AMD IOMMU specification](https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/specifications/48882_IOMMU.pdf) | AMD Public Use document; no code copied. |
-| Trusted Computing Group | TPM 2.0 commands/data and PC-client platform profile for future measured boot/sealing | [TPM 2.0 Library](https://trustedcomputinggroup.org/resource/tpm-library-specification/), [PC Client PTP](https://trustedcomputinggroup.org/resource/pc-client-platform-tpm-profile-ptp-specification/) | TCG specification terms apply; R0 boot does not depend on TPM. |
-| uACPI project | Small OS-agnostic ACPI/AML implementation surface and MIT licensing | [uACPI](https://github.com/uACPI/uACPI) | MIT repository; exact revision/files and notices still require review. |
-| Intel ACPICA project | Mature OS-independent ACPI implementation and compatibility oracle | [ACPICA](https://github.com/acpica/acpica), [Intel ACPICA downloads](https://www.intel.com/content/www/us/en/developer/topic-technology/open/acpica/download.html) | Dual-license/per-file review required before integration. |
-
-## CPU and motherboard candidates
-
-| Source / authority | Relevant claim | URL / reference | Licensing relevance |
-|---|---|---|---|
-| Intel — Core i5-9500 | Six homogeneous cores, 65 W, UHD 630 and VT-d; discontinued lifecycle | [i5-9500 specifications](https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html) | Product facts only. |
-| Intel — Core i5-8500 | Same-shape six-core/UHD 630/VT-d fallback | [i5-8500 specifications](https://www.intel.com/content/www/us/en/products/sku/129939/intel-core-i58500-processor-9m-cache-up-to-4-10-ghz/specifications.html) | Product facts only. |
-| Intel — Q370 | PCIe 3.0, chipset USB/SATA, VT-d and PTT features | [Q370 specifications](https://www.intel.com/content/www/us/en/products/sku/133282/intel-q370-chipset/specifications.html), [300-series PCH datasheet](https://www.intel.com/content/www/us/en/content-details/337867/intel-300-series-chipset-family-pch-datasheet-vol-1.html) | Product/datasheet facts; board firmware must still be tested. |
-| ASUS — PRIME Q370M-C/CSM | Q370, I219-LM, dual M.2, two COM headers, LPC debug, onboard TPM and AMI UEFI/ACPI 6.1 | [Manual](https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf), [specifications](https://www.asus.com/us/motherboards-components/motherboards/prime/prime-q370m-c-csm/techspec/) | Copyrighted vendor material; facts only. The UART electrical/programming model still needs specimen validation. |
-| AMD — Ryzen 5 5600G | Six Zen 3 cores/twelve threads, 65 W, PCIe 3.0 and integrated Radeon graphics | [5600G specifications](https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen/ryzen-5000-series/amd-ryzen-5-5600g.html) | Product facts only. |
-| AMD — AM4/B550 | Ryzen 5000/B550 platform compatibility | [AMD AM4 chipsets](https://www.amd.com/en/products/processors/chipsets/am4.html) | Product facts only. |
-| ASUS — Pro B550M-C/CSM | B550, M.2, COM/LPC debug, onboard TPM 2.0, Realtek RTL8111H and AMI UEFI | [Specifications](https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/), [firmware support](https://www.asus.com/us/motherboards-components/motherboards/csm/pro-b550m-c-csm/helpdesk_bios?model2Name=Pro-B550M-C-CSM) | Copyrighted vendor facts/firmware; redistribution is not implied. |
-| MSI — PRO B550M-P | Alternative B550 board with COM, TPM header and debug LEDs | [MSI specifications](https://www.msi.com/Motherboard/PRO-B550M-P/Specification) | Product facts only. |
-
-## Graphics
-
-| Source / authority | Relevant claim | URL / reference | Licensing relevance |
-|---|---|---|---|
-| Intel — Coffee Lake graphics PRM | Target-specific public programming documentation for UHD 630 generation | [Coffee Lake graphics documentation](https://www.intel.com/content/www/us/en/docs/graphics-for-linux/developer-reference/1-0/coffee-lake.html) | Documentation availability does not license a driver or firmware. |
-| Linux kernel documentation | DRM/KMS, GEM/TTM, scheduler and i915 firmware/power dependencies demonstrate the kernel-side port surface | [DRM KMS](https://docs.kernel.org/gpu/drm-kms.html), [DRM memory management](https://docs.kernel.org/gpu/drm-mm.html), [i915](https://docs.kernel.org/gpu/i915.html) | Linux is GPL-2.0-only as a whole; exact-file SPDX review required. |
-| Haiku source | Native non-Linux `intel_extreme` table contains Coffee Lake device IDs | [Haiku intel_extreme](https://github.com/haiku/haiku/blob/master/src/add-ons/kernel/drivers/graphics/intel_extreme/driver.cpp#L173-L183) | Haiku is MIT-oriented; preserve per-file notices and audit dependencies. |
-| Mesa — ANV | Intel Vulkan userspace dependencies; documented GuC boundary begins after the proposed Coffee Lake generation | [ANV](https://docs.mesa3d.org/drivers/anv.html) | Mesa is mostly MIT; per-file/dependency review required. |
-| Linux AMDGPU documentation | AMD IP-block, PSP/SMU/DC/SDMA/GC/VCN split and Display Core boundary | [AMDGPU core](https://docs.kernel.org/gpu/amdgpu/driver-core.html), [AMD Display Core](https://docs.kernel.org/5.15/gpu/amdgpu-dc.html) | Linux/file-level GPL/SPDX review; firmware separate. |
-| Mesa — RADV | Vulkan userspace driver depends on amdgpu DRM uAPI/libdrm and a winsys boundary | [RADV](https://docs.mesa3d.org/drivers/radv.html) | Mesa mostly MIT, but Linux-facing dependencies are separate artifacts. |
-| AMD GPUOpen / linux-firmware | Public shader ISA material and separate Radeon firmware redistribution terms | [AMD machine-readable ISA](https://gpuopen.com/machine-readable-isa/), [Radeon firmware license](https://kernel.googlesource.com/pub/scm/linux/kernel/git/firmware/linux-firmware/+/refs/heads/main/LICENSE.radeon) | Documentation/tool and binary-firmware terms differ; preserve notices and restrictions. |
-| NVIDIA | Turing+ open Linux kernel modules, OS-agnostic core/Linux interface layer, GSP and matched userspace boundary | [Open GPU kernel modules](https://github.com/NVIDIA/open-gpu-kernel-modules), [open GPU docs](https://github.com/NVIDIA/open-gpu-doc) | Kernel source has GPL/MIT portions; GSP firmware and proprietary userspace are separately licensed. |
-| Mesa — NVK | Modern NVIDIA Vulkan implementation remains tied to a Linux kernel baseline | [NVK](https://docs.mesa3d.org/drivers/nvk.html) | Mesa per-file licenses; conformance does not transfer to a Malrynth port. |
-| FreeBSD drm-kmod / Redox / SerenityOS | Non-Linux implementation evidence bounds what is truly native versus a LinuxKPI port or framebuffer fallback | [FreeBSD drm-kmod](https://github.com/freebsd/drm-kmod), [Redox hardware](https://github.com/redox-os/redox/blob/master/HARDWARE.md), [Serenity Intel GPU](https://github.com/SerenityOS/serenity/blob/master/Kernel/Devices/GPU/Intel/NativeGraphicsAdapter.cpp) | Mixed BSD/GPL/MIT and firmware; per-file audit required. |
-| Mesa and Linux licensing documentation | Project-wide licensing baselines used in the porting analysis | [Mesa license](https://docs.mesa3d.org/license.html), [Linux licensing rules](https://docs.kernel.org/process/license-rules.html) | These are routing rules; exact source files control reuse. |
-
-## Storage, USB, input, networking and audio
-
-| Source / authority | Relevant claim | URL / reference | Licensing relevance |
-|---|---|---|---|
-| NVM Express | Controller registers, queues, namespaces, Identify, PRPs, reset and power-state contract | [NVM Express specifications](https://nvmexpress.org/specifications/) | NVM Express specification terms apply. |
-| Samsung | 970 EVO Plus is M.2 2280, PCIe Gen3 x4 and NVMe 1.3 | [970 EVO Plus data sheet](https://download.semiconductor.samsung.com/resources/data-sheet/Samsung_NVMe_SSD_970_EVO_Plus_Data_Sheet_Rev.3.0_10129514071343.pdf) | Proprietary vendor data sheet; facts only. |
-| Western Digital | SN570 is a second mainstream NVMe client-family cross-check | [WD Blue SN570 data sheet](https://documents.westerndigital.com/content/dam/doc-library/en_us/assets/public/western-digital/product/internal-drives/wd-blue-nvme-ssd/data-sheet-wd-blue-sn570-nvme-ssd.pdf) | Proprietary product document; facts only. |
-| Intel / USB-IF — xHCI 1.2 | xHCI capability/operational/runtime/doorbell registers, command/event/transfer rings, contexts and root ports | [xHCI 1.2](https://www.intel.com/content/dam/www/public/us/en/documents/technical-specifications/extensible-host-controler-interface-usb-xhci.pdf) | Specification/adopter terms apply; implement independently. |
-| USB-IF — USB 2.0, HID and Usage Tables | Enumeration/control transfers, hubs, boot keyboard/mouse protocols and report semantics | [USB documents](https://www.usb.org/documents), [HID resources](https://www.usb.org/hid) | USB-IF adopter/document terms apply. |
-| Microsoft HID Tools | MIT-licensed HID descriptor authoring/validation oracle referenced by USB-IF | [HID tools](https://github.com/microsoft/hidtools) | MIT; exact files/notices required for reuse. |
-| Intel — I210 | Public external architecture/register definitions for a PCIe 1GbE controller | [I210 datasheet](https://www.intel.com/content/www/us/en/content-details/333016/intel-ethernet-controller-i210-datasheet.html), [I210-T1](https://www.intel.com/content/www/us/en/products/sku/68668/intel-ethernet-server-adapter-i210t1/specifications.html) | Documentation/product facts; adapter NVM remains part of the specimen. |
-| Intel — 82574L | Documented discontinued PCIe 1GbE fallback | [82574L specifications](https://www.intel.com/content/www/us/en/products/sku/32209/intel-82574l-gigabit-ethernet-controller/specifications.html) | Product facts only. |
-| FreeBSD source | Permissive implementation evidence for Intel `em`/I210-family logic | [FreeBSD if_em](https://github.com/freebsd/freebsd-src/blob/main/sys/dev/e1000/if_em.c), [FreeBSD e1000 directory](https://github.com/freebsd/freebsd-src/tree/main/sys/dev/e1000) | `if_em.c` is BSD-2-Clause; adjacent files require individual review. |
-| Linux wireless documentation | Firmware/mac80211/cfg80211/regulatory dependency shape and reusable ISC regulatory database design | [Linux wireless](https://wireless.docs.kernel.org/en/latest/), [regulatory design](https://wireless.docs.kernel.org/en/latest/en/developers/regulatory.html), [wireless-regdb](https://wireless.docs.kernel.org/en/latest/en/developers/regulatory/wireless-regdb.html) | Linux driver code GPL; regulatory database is separately ISC-licensed. |
-| Bluetooth SIG / USB-IF | Bluetooth Core/HCI/host/profile split and standard USB Bluetooth class tuple | [Bluetooth Core 6.3](https://www.bluetooth.com/specifications/specs/core-specification-6-3/), [USB class codes](https://usb.org/defined-class-codes) | SIG/USB adopter terms apply. |
-| Intel — High Definition Audio 1.0a | HDA controller, CORB/RIRB, streams, codec widgets/verbs and DMA buffer descriptors | [Intel HDA specification](https://www.intel.la/content/dam/www/public/us/en/documents/product-specifications/high-definition-audio-specification.pdf) | Specification reference; no source license. |
-| USB-IF — Audio Device Class | Current UAC documents and the basis for a bounded UAC1-first implementation | [USB Audio documents](https://www.usb.org/documents?search=audio) | USB-IF document/adopter terms apply. |
-
-## Porting, virtualization and driver-domain evidence
-
-| Source / authority | Relevant claim | URL / reference | Licensing relevance |
-|---|---|---|---|
-| Linux kernel — VFIO | IOMMU groups, DMA mapping and interrupt delivery are necessary for isolated direct device access | [VFIO documentation](https://docs.kernel.org/driver-api/vfio.html) | Implementation evidence under Linux GPL terms; not a Malrynth API proposal. |
-| OASIS — Virtio 1.3 | Stable virtual-device queues/transports and explicitly described shared-memory regions | [Virtio 1.3](https://docs.oasis-open.org/virtio/virtio/v1.3/virtio-v1.3.html) | OASIS specification terms apply. |
-| QEMU — ivshmem | Shared memory and notifications can connect isolated VM peers, but lifecycle/backend work remains | [QEMU ivshmem](https://www.qemu.org/docs/master/system/devices/ivshmem.html) | QEMU is GPLv2 with component-specific licenses. |
-| QEMU — device models | Repeatable e1000/e1000e, NVMe, xHCI, virtio and failure-path test oracles | [QEMU device emulation](https://www.qemu.org/docs/master/system/device-emulation.html) | GPLv2; use as an external test oracle unless code licensing is explicitly accepted. |
-| FreeBSD Project | BSD-2-Clause is preferred for new FreeBSD source but the tree includes other licenses | [FreeBSD licensing policy](https://docs.freebsd.org/en/articles/license-guide/) | Project-level policy does not replace per-file review. |
-| Redox OS | Non-Linux user-space/native driver architecture and implementation evidence | [Redox drivers](https://github.com/redox-os/drivers) | Repository is MIT-oriented; audit exact files and archived/current status. |
+This ledger records the evidence used for the R0 recommendation. It is deliberately
+more than a link list: each entry identifies the authority, the decision it supports,
+and the licensing implication for MALRYNTH. All web sources were accessed on
+2026-08-19 unless a different date is stated. Product availability must still be
+confirmed at procurement time.
 
 ## Evidence policy
 
-- **OFFICIAL FACT** rows support standards, product and vendor-interface claims.
-- **OPEN-SOURCE IMPLEMENTATION EVIDENCE** shows feasibility and dependency shape; it does not mean code can compile on Malrynth or be reused under any desired license.
-- **COMMUNITY EVIDENCE** appears only where an official/non-Linux record is absent and is not sufficient for a support claim.
-- Firmware is inventoried independently from driver source: acquisition, version, hash, signature, redistribution, loader ABI and update method are separate fields.
-- Hardware support requires an exact Malrynth test record. Documentation and Linux inventory alone never produce `r0-supported` status.
+- Standards bodies and silicon or board vendors are the primary authorities for
+  interfaces, features, and electrical/platform facts.
+- Linux, FreeBSD, Mesa, and QEMU are implementation evidence. They show practical
+  complexity and useful decomposition, but do not define MALRYNTH's architecture.
+- Driver source is not assumed reusable. Every imported line would require a
+  file-by-file provenance and license review; the report recommends specifications
+  and clean implementations whenever practical.
+- Product pages establish that a configuration exists, not that every firmware
+  revision behaves correctly. Physical acceptance tests remain mandatory.
+
+## Platform, processor, and firmware standards
+
+| ID | Authority and source | Evidence used | Licensing / reuse relevance |
+|---|---|---|---|
+| P01 | [UEFI Forum specifications](https://uefi.org/specifications) and [UEFI 2.11](https://uefi.org/specs/UEFI/2.11/) | UEFI 2.11 is the current published UEFI specification; defines boot services, GOP, memory maps, and configuration tables used by the R0 contract. | Specification/reference material. Implement to the interface; do not copy sample material without checking Forum terms. |
+| P02 | [UEFI Forum ACPI 6.6](https://uefi.org/specs/ACPI/6.6/) | Current ACPI tables, AML namespace, interrupt, power, and IOMMU discovery structures. Supports the report's staged ACPI plan. | Specification/reference material; no third-party driver code required. |
+| P03 | [Intel 64 and IA-32 Software Developer Manuals](https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html) | Architectural execution, paging, APIC, exception, cache, and virtualization behavior for the Intel-first baseline. Page updated 2026-06-22. | Vendor documentation; implementation should be original and cite the relevant volume/section. |
+| P04 | [AMD64 Architecture Programmer's Manual hub](https://docs.amd.com/api/khub/documents/68GKiN0gMEd6bMddsmhPwg/content) and [Volume 2](https://docs.amd.com/v/u/en-US/24593_3.44_APM_Vol2) | AMD64 system programming differences used to assess the AM4 alternative. | Vendor documentation; clean implementation reference. |
+| P05 | [Intel Q470E chipset specifications](https://www.intel.com/content/www/us/en/products/sku/203700/intel-q470e-chipset/specifications.html) and [Core i5-10500TE](https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html) | Establishes the primary Comet Lake-S/Embedded family, homogeneous six-core CPU, UHD 630, VT-d, PTT, PCIe/PCH and USB capabilities. | Product facts only; exact board firmware controls exposure. |
+| P06 | [MSI MS-98N9](https://ipc.msi.com/product_detail/Industrial-Motherboard/ATX/MS-98N9), [official manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf), and [ASUS Q470EI-IM-A manual](https://dlcdnets.asus.com/pub/ASUS/mb/Embedded_IPC/Q470EI-IM-A/E21947_Q470EI-IM-A_UM_v5_WEB.pdf?model=Q470EI-IM-A) | Q470E R0-A examples with Intel I210/I219, serial/debug, NVMe, TPM and UEFI; MSI explicitly documents 16550A serial. | Product/manual facts only; firmware remains proprietary. |
+| P07 | [Intel Q370 chipset](https://www.intel.com/content/www/us/en/products/sku/133282/intel-q370-chipset/specifications.html), [Supermicro X11SCQ manual](https://www.supermicro.com/manuals/motherboard/X11/MNL-2110.pdf), and [ASUS PRIME Q370M-C/CSM manual](https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf) | Establishes the used-market Intel alternative; Supermicro explicitly documents I210 and 16550-compatible UARTs, while ASUS needs an added I210 and UART qualification. | Board/product facts only; discontinued inventory is not a generic support claim. |
+| P08 | [Intel Comet Lake graphics PRM](https://www.intel.com/content/www/us/en/docs/graphics-for-linux/developer-reference/1-0/comet-lake.html) | Public generation-specific graphics configuration material exists; it does not make a native display or Vulkan port small. | Vendor documentation only. |
+| P09 | [AMD Ryzen 5 PRO 5650G support page](https://www.amd.com/en/support/downloads/drivers.html/processors/ryzen-pro/ryzen-pro-5000-series/amd-ryzen-5-pro-5650g.html) and [Ryzen product guide](https://www.amd.com/content/dam/amd/en/documents/partner-hub/ryzen/amd-consumer-pocket-guide-ryzen-radeon-july-2024.pdf) | Establishes the AM4 APU candidates for R0-B and their integrated graphics capability. | Product facts; downloadable vendor driver packages are not a MALRYNTH code source. |
+| P10 | [ASUS Pro B550M-C/CSM specifications](https://www.asus.com/motherboards-components/motherboards/csm/pro-b550m-c-csm/techspec/) | Documents the preferred AMD fallback's COM/LPC debug, onboard TPM 2.0, M.2 storage, AMI UEFI, and RTL8111H. | Product facts only; exact firmware behavior still requires physical validation. |
+| P11 | [ASRock B550M Pro4 product page](https://www.asrock.com/mb/AMD/B550M%20Pro4/) and [manual](https://download.asrock.com/Manual/B550M%20Pro4.pdf) | Lower-cost AM4 candidate; documents serial/TPM headers, storage, RTL8111H, and the ASM1074-connected USB ports that initial xHCI tests should avoid. | Product documentation only. |
+| P12 | [ASUS Q470EI-IM-A data sheet](https://dlcdnets.asus.com/pub/ASUS/mb/Embedded_IPC/Q470EI-IM-A/DataSheet_Q470EI-IM-A_20221005.pdf?model=Q470EI-IM-A) | Compact Q470E alternative with dual Intel Ethernet, multiple serial ports, storage and TPM exposure; exact UART compatibility must be qualified. | Board facts only. |
+| P13 | [Intel microcode update guidance](https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/best-practices/microcode-update-guidance.html) | Establishes why firmware/microcode revision is security-relevant and must be logged in qualification. | Redistribution of microcode blobs is governed separately from source code. |
+| P14 | [Linux x86 microcode loader documentation](https://www.kernel.org/doc/html/latest/arch/x86/microcode.html) | Implementation evidence for early versus late microcode loading and revision reporting. | Linux documentation/code is generally GPL-2.0; use as behavioral evidence, not a copy source. Blob licenses remain separate. |
+
+## Bus, storage, USB, and input specifications
+
+| ID | Authority and source | Evidence used | Licensing / reuse relevance |
+|---|---|---|---|
+| B01 | [PCI-SIG PCI Express specification overview](https://pcisig.com/specification-overview/pci-express-base) | PCIe is the transport underlying NVMe, Ethernet, and later expansion; current-generation features are not an R0 requirement. | PCI-SIG specifications have access/usage terms; implement public interface behavior and record exact revision used. |
+| B02 | [Linux PCI MSI guide](https://docs.kernel.org/6.0/PCI/msi-howto.html) | Practical ordering and failure modes for MSI/MSI-X enablement. Supports initially keeping legacy interrupt fallback where hardware permits. | GPL-licensed implementation ecosystem; documentation is design evidence only. |
+| B03 | [NVM Express specifications](https://nvmexpress.org/specifications/) and [Base Specification page](https://nvmexpress.org/specification/nvm-express-base-specification/) | NVMe Base 2.3 is the current base revision; queue, namespace, admin, reset, and error semantics define the native storage driver. | Specification/reference material. Conformance does not imply code reuse. |
+| B04 | [Samsung 970 EVO Plus data sheet](https://image.semiconductor.samsung.com/resources/data-sheet/Samsung_NVMe_SSD_970_EVO_Plus_Data_Sheet_Rev.3.0.pdf) | Candidate consumer NVMe device with broad field history; useful as one test point, never the sole compatibility target. | Product facts only; vendor firmware is opaque. |
+| B05 | [WD Blue SN570 product brief](https://documents.westerndigital.com/content/dam/doc-library/en_us/assets/public/western-digital/product/internal-drives/wd-blue-nvme-ssd/product-brief-wd-blue-sn570-nvme-ssd.pdf) | Second-controller/vendor consumer NVMe candidate for diversity testing. | Product facts only. |
+| B06 | [Micron 7450 product page](https://www.micron.com/products/storage/ssd/data-center-ssd/7450-ssd) and [technical specification](https://assets.micron.com/adobe/assets/urn%3Aaaid%3Aaem%3Ad133a40b-b36c-4b17-b768-659acc4d4bca/renditions/original/as/7450-nvme-ssd-tech-prod-spec.pdf) | Enterprise/datacenter contrast device with explicit power-loss and namespace characteristics; suitable for a later robustness tier. | Product facts only. |
+| B07 | [QEMU NVMe device documentation](https://www.qemu.org/docs/master/system/devices/nvme.html) | Emulation evidence for controllable queue/namespace testing before physical media. Not a substitute for controller qualification. | QEMU is GPL-2.0; use the model as a test oracle cautiously, not as native driver source. |
+| B08 | [Intel USB specification index](https://www.intel.com/content/www/us/en/products/docs/io/universal-serial-bus/universal-serial-bus-specifications.html) and [xHCI 2.0](https://www.intel.com/content/www/us/en/content-details/868296/extensible-host-controller-interface-for-universal-serial-bus-xhci-requirements-specification-r2-0.html) | Defines xHCI registers, rings, contexts, ports, command/event transfer model, and reset sequence for the R0 USB host driver. | Specification/reference material; clean implementation recommended. |
+| B09 | [USB-IF HID document page](https://www.usb.org/hid) and [HID 1.11](https://www.usb.org/sites/default/files/hid1_11.pdf) | Boot keyboard/mouse protocols and report descriptors. Supports boot-protocol input first and general reports later. | Specification/reference material. USB-IF marks/logos have separate compliance rules not relevant to source reuse. |
+| B10 | [Linux HID transport documentation](https://www.kernel.org/doc/html/latest/hid/hid-transport.html) | Shows a useful separation among transport, HID core, report parsing, and device handling. | Architecture evidence only; Linux code is not assumed portable or license-compatible with all MALRYNTH components. |
+
+## Networking, wireless, Bluetooth, and audio
+
+| ID | Authority and source | Evidence used | Licensing / reuse relevance |
+|---|---|---|---|
+| N01 | [Intel I210 data sheet](https://www.intel.com/content/www/us/en/content-details/333016/intel-ethernet-controller-i210-datasheet.html) | Primary Ethernet recommendation: documented register/descriptor model, MSI/MSI-X, EEPROM/NVM, and widely exercised hardware. | Vendor documentation; original driver preferred. Access terms should be checked when downloading. |
+| N02 | [Intel I350 data sheet](https://www.intel.com/content/www/us/en/content-details/333171/intel-ethernet-controller-i350-datasheet.html) | Multi-port alternative in the same broadly understood Intel family, useful for later routing and virtualization tests. | Vendor documentation; original driver preferred. |
+| N03 | [Intel Ethernet controller documentation index](https://www.intel.com/content/www/us/en/support/articles/000093196/ethernet-products.html) | Confirms availability of official controller documentation and distinguishes documented families from opaque consumer NIC choices. | Documentation index only. |
+| N04 | [FreeBSD e1000 driver tree](https://cgit.freebsd.org/src/tree/sys/dev/e1000) | Independent implementation evidence for I210/I350 family split, OS-dependency boundary, reset/NVM details, and errata handling. | Contains BSD/Intel notices and must be reviewed file by file. Potential bootstrap source only after explicit provenance review. |
+| N05 | [QEMU igb emulation](https://www.qemu.org/docs/master/system/devices/igb.html) | Provides a deterministic I350-style virtual device for tests while the native physical driver matures. | QEMU GPL-2.0: acceptable test dependency, not a permissive native-driver code source. |
+| N06 | [Linux Wireless iwlwifi documentation](https://wireless.docs.kernel.org/en/latest/en/users/drivers/iwlwifi.html) and [core/component split](https://wireless.docs.kernel.org/en/latest/en/users/drivers/iwlwifi/core_release.html) | Demonstrates firmware dependency and substantial separation between transport, firmware API, mac80211/cfg80211, and regulatory logic. Supports deferring Wi-Fi. | Kernel code is GPL-2.0 and firmware has separate redistribution terms. Any port would be isolated and audited. |
+| N07 | [Linux wireless regulatory rules](https://wireless.docs.kernel.org/en/latest/en/developers/regulatory/processing_rules.html) and [cfg80211](https://wireless.docs.kernel.org/en/latest/en/developers/documentation/cfg80211.html) | Evidence that legal/regulatory policy and a complete wireless control plane are part of Wi-Fi support, not optional polish. | GPL ecosystem; concepts may inform design, but code reuse needs an explicit boundary and legal review. |
+| N08 | [Bluetooth SIG core specifications](https://www.bluetooth.com/specifications/specs/) and [HCI functional specification](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-60/out/en/host-controller-interface/host-controller-interface-functional-specification.html) | HCI provides a plausible transport/control boundary, but pairing, security, profiles, and coexistence make useful Bluetooth a later milestone. | Specification access and Bluetooth qualification/mark rules are distinct from driver source licensing. |
+| N09 | [USB-IF Audio document search](https://www.usb.org/documents?search=audio) | USB Audio Class provides a more bounded first audio target than integrated HDA; UAC1 is selected as the first subset. | Specification/reference material. |
+| N10 | [Intel High Definition Audio specification](https://www.intel.com/content/dam/www/public/us/en/documents/product-specifications/high-definition-audio-specification.pdf) | Defines controller streams, CORB/RIRB, codec verbs, and link behavior for the later HDA milestone. | Vendor specification; codec-specific initialization still needs vendor/public evidence. |
+| N11 | [Linux HD-audio documentation](https://docs.kernel.org/sound/hd-audio/index.html) and [implementation notes](https://docs.kernel.org/6.7/sound/hd-audio/notes.html) | Shows the real-world codec parser, pin routing, and quirk burden that makes laptop HDA a poor R0 dependency. | GPL implementation evidence; no direct reuse assumed. |
+
+## Graphics and acceleration feasibility
+
+| ID | Authority and source | Evidence used | Licensing / reuse relevance |
+|---|---|---|---|
+| G01 | [Intel graphics programmer reference manuals](https://www.intel.com/content/www/us/en/docs/graphics-for-linux/developer-reference/1-0/overview.html) | Public generation-specific reference material makes Intel integrated graphics inspectable, but display, memory management, scheduling, and media remain large subsystems. | Vendor documentation; original implementation remains substantial. |
+| G02 | [Linux i915 documentation](https://docs.kernel.org/gpu/i915.html) and [Xe documentation](https://docs.kernel.org/gpu/xe/) | Scale and decomposition evidence for mature versus newer Intel GPU drivers. Supports GOP-only R0 and a later native display milestone. | Linux code is GPL-2.0/MIT on a per-file basis; never assume whole-driver portability. |
+| G03 | [Mesa ANV documentation](https://docs.mesa3d.org/drivers/anv.html) and [Intel media-driver README](https://github.com/intel/media-driver/blob/master/README.md) | Shows that Vulkan and media acceleration are separate user-space/compiler/runtime projects beyond a kernel display driver. | Mesa is predominantly MIT with per-file notices; media-driver uses permissive terms. Audit every component and its dependencies. |
+| G04 | [Linux AMDGPU documentation](https://docs.kernel.org/gpu/amdgpu/index.html), [driver core](https://docs.kernel.org/6.17/gpu/amdgpu/driver-core.html), and [display core](https://docs.kernel.org/6.0/gpu/amdgpu/display/index.html) | AMD's documented split and OS-agnostic Display Core make it the strongest long-term discrete-GPU research candidate, while still exposing major firmware and subsystem dependencies. | AMDGPU contains mixed per-file licenses, including MIT-compatible material; a curated port requires provenance and dependency isolation. |
+| G05 | [AMD GPUOpen architecture documentation](https://gpuopen.com/amd-gpu-architecture-programming-documentation/) and [Mesa RADV](https://docs.mesa3d.org/drivers/radv.html) | Public architecture/programming material and a mature open Vulkan stack improve feasibility relative to opaque alternatives. | Documentation and Mesa code have separate terms; shaders/firmware blobs require their own review. |
+| G06 | [Linux AMDGPU Kconfig](https://github.com/torvalds/linux/blob/master/drivers/gpu/drm/amd/amdgpu/Kconfig) | Direct evidence of dependencies on DRM, firmware, memory management, display, scheduler, and platform facilities. | Evidence only; Kconfig/source is not an architectural mandate for MALRYNTH. |
+| G07 | [NVIDIA open GPU kernel modules README](https://github.com/NVIDIA/open-gpu-kernel-modules/blob/main/README.md), [open-kernel-module guidance](https://download.nvidia.com/XFree86/Linux-x86_64/570.86.16/README/kernel_open.html), and [GSP firmware](https://download.nvidia.com/XFree86/Linux-x86_64/610.43.03/README/gsp.html) | Kernel modules are open for supported GPUs, but substantial GSP firmware and proprietary user-space coupling remain. Supports ranking NVIDIA behind AMD and Intel for an independent OS. | Modules are dual MIT/GPLv2, but firmware and user-space components have separate licenses and redistribution conditions. |
+| G08 | [Linux Nouveau documentation](https://docs.kernel.org/gpu/nouveau.html), [Nova documentation](https://docs.kernel.org/gpu/nova/index.html), and [Mesa NVK](https://docs.mesa3d.org/drivers/nvk.html) | Open-community paths exist, yet generation coverage, firmware, reclocking, and evolving kernel interfaces raise schedule risk. | Mixed kernel/Mesa licenses and firmware provenance require component-level review. |
+| G09 | [FreeBSD drm-kmod](https://github.com/freebsd/drm-kmod) | Strong evidence that importing Linux graphics drivers into another kernel needs a large LinuxKPI compatibility layer and separate firmware packaging. | Mixed inherited licenses; useful cautionary precedent, not a drop-in solution. |
+| G10 | [ROCm Linux system requirements](https://rocm.docs.amd.com/projects/install-on-linux/en/develop/reference/system-requirements.html) | Compute support assumes a large Linux user/kernel ecosystem and a narrow tested matrix; it is not part of R0 graphics success. | ROCm components have their own open-source licenses and binary dependencies; audit separately if ever considered. |
+
+## IOMMU, security hardware, virtualization, and debugging
+
+| ID | Authority and source | Evidence used | Licensing / reuse relevance |
+|---|---|---|---|
+| S01 | [Intel VT-d architecture specification](https://www.intel.com/content/www/us/en/content-details/919688/intel-virtualization-technology-for-directed-i-o-architecture-specification.html) | Defines DMA remapping, root/context tables, invalidation, interrupt remapping, and fault reporting for the Intel path. | Vendor specification; clean implementation. |
+| S02 | [AMD I/O Virtualization Technology specification](https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/specifications/48882_IOMMU.pdf) | Defines AMD IOMMU discovery and translation model for the R0-B comparison. | Vendor specification; clean implementation. |
+| S03 | [Linux VFIO documentation](https://cdn.kernel.org/doc/html/latest/driver-api/vfio.html) | Shows why IOMMU groups reflect real isolation topology and why passthrough safety cannot be inferred from a device alone. | GPL implementation/design evidence; MALRYNTH need not copy VFIO's user API. |
+| S04 | [OASIS Virtio 1.3](https://docs.oasis-open.org/virtio/virtio/v1.3/virtio-v1.3.html) | Stable virtual-device baseline for pre-hardware tests and a comparison point for native-driver complexity. | OASIS specification terms apply; implement the interface independently. |
+| S05 | [Trusted Computing Group TPM library specification](https://trustedcomputinggroup.org/resource/tpm-library-specification/) and [PC Client firmware profile](https://trustedcomputinggroup.org/resource/pc-client-specific-platform-firmware-profile-specification/) | TPM 2.0 commands and PC-client firmware exposure are standardized; TPM is valuable for measurement but deliberately not an R0 boot dependency. TPM library revision 185 was published in March 2026. | Specification/reference material. Certification and trademark requirements are separate from implementation source licensing. |
+| S06 | [TI TL16C550D product page](https://www.ti.com/product/TL16C550D) and [data sheet](https://www.ti.com/lit/gpn/TL16C550D) | Canonical 16550-compatible UART behavior for a stable, low-complexity physical debug console. | Vendor documentation; clean driver implementation is straightforward. |
+| S07 | [QEMU PCI serial specification](https://www.qemu.org/docs/master/specs/pci-serial.html) and [QEMU invocation manual](https://www.qemu.org/docs/master/system/qemu-manpage.html) | Deterministic virtual serial plumbing for parity between emulator logs and physical UART logs. | QEMU remains an external GPL test dependency; no code import is needed. |
+
+## Local probe evidence
+
+The development laptop was inspected read-only on 2026-08-19 with Linux sysfs,
+`lspci`, `lsusb`, `lscpu`, DMI, and block-device metadata. Salient identities are
+summarized in `README.md`; selected system, storage, Ethernet and wireless records are
+captured in `INVESTIGATED-HARDWARE.json`. This is direct observation, not a web source. It
+supports using the laptop only as a later hostile/secondary target because hybrid
+graphics, CNVi, embedded-controller power behavior, and laptop ACPI all arrive at
+once.
+
+No confidential firmware, proprietary source, credentials, or device serial numbers
+are included in the research dataset. The JSON stores product and PCI/USB identities
+needed for repeatable engineering decisions.

@@ -1,4 +1,4 @@
-# Audio reference: PCM core, HDA first physical path, USB class next
+# Audio reference: PCM core, USB class first physical path, HDA later
 
 Research snapshot: 2026-08-19. Scope: Intel High Definition Audio (HDA), USB Audio Class (UAC), HDMI/DisplayPort audio, virtual audio and the boundary between basic playback and professional-audio support.
 
@@ -12,13 +12,18 @@ Research snapshot: 2026-08-19. Scope: Intel High Definition Audio (HDA), USB Aud
 
 ## Decision and target ranking
 
-**PROPOSED MALRYNTH DECISION:** build a transport-neutral PCM engine first, then an HDA playback path in QEMU, then one physical desktop HDA controller/codec. Add USB Audio after xHCI isochronous transfers are reliable. HDMI/DisplayPort audio follows the relevant GPU/display driver. Do not spend R0 effort on AC'97, Sound Blaster, vendor DSP/SoundWire machine drivers or Bluetooth audio.
+**PROPOSED MALRYNTH DECISION:** build a transport-neutral PCM engine first. Use a simple
+USB Audio Class 1 playback device as the first physical audio target after xHCI isochronous
+transfers are reliable. QEMU HDA remains a deterministic development oracle, while physical
+motherboard HDA follows as a later desktop target. HDMI/DisplayPort audio follows the relevant
+GPU/display driver. Audio is not an R0 boot gate. Do not spend early effort on AC'97, Sound
+Blaster, vendor DSP/SoundWire machine drivers or Bluetooth audio.
 
 | Rank | Family | Concrete identity / contract | Phase and boundary |
 |---|---|---|---|
-| 1 | QEMU ICH9 HDA plus `hda-duplex`/`hda-output` codec | PCI multimedia-audio class `04:03`; ICH9 hardware identity is `8086:293e` when that model is selected | R0/R1 deterministic playback/capture laboratory. Use model plus class and record actual ID; do not generalize an ICH9 quirk to all HDA. QEMU has a dedicated ICH9 HDA test model ([QEMU HDA test](https://gitlab.com/qemu-project/qemu/-/blob/master/tests/qtest/intel-hda-test.c), [upstream ICH9 identity evidence](https://android.googlesource.com/kernel/common/+/e0a30b8f9550000cfde7b0292e76fcb23e358060/sound/pci/hda/hda_intel.c)). |
-| 2 | Desktop Intel/AMD HDA controller with conventional analog codec, especially Realtek ALC887/892/897/1220-class boards | bind controller by `04:03`; discover codec vendor/device and widget graph through HDA verbs; exact subsystem/codec captured per board | R1 first physical path. Choose a desktop board with rear line-out and no mandatory vendor DSP. The HDA spec defines a discoverable controller/codec interface, but board pin routing still needs validation ([Intel HDA 1.0a](https://www.intel.la/content/dam/www/public/us/en/documents/product-specifications/high-definition-audio-specification.pdf)). |
-| 3 | Standards-class USB Audio 1.0/2.0 DAC or duplex interface | USB Audio class descriptors, not VID:PID | R1/R2 portable external path. UAC 4.0 is current, but UAC1/UAC2 cover much deployed hardware; implement bounded versions explicitly, not “all USB audio” ([USB-IF Audio document library](https://www.usb.org/documents?search=audio)). |
+| 1 | Standards-class USB Audio 1.0 DAC or simple duplex headset | USB Audio class descriptors, not VID:PID | First physical audio path after xHCI isochronous support. Start with fixed 48-kHz stereo playback and no vendor driver; implement a bounded UAC1 subset, not “all USB audio” ([USB-IF Audio document library](https://www.usb.org/documents?search=audio)). |
+| 2 | QEMU ICH9 HDA plus `hda-duplex`/`hda-output` codec | PCI multimedia-audio class `04:03`; ICH9 hardware identity is `8086:293e` when that model is selected | Deterministic playback/capture laboratory that may run before physical UAC. Use model plus class and record actual ID; do not generalize an ICH9 quirk to all HDA. QEMU has a dedicated ICH9 HDA test model ([QEMU HDA test](https://gitlab.com/qemu-project/qemu/-/blob/master/tests/qtest/intel-hda-test.c), [upstream ICH9 identity evidence](https://android.googlesource.com/kernel/common/+/e0a30b8f9550000cfde7b0292e76fcb23e358060/sound/pci/hda/hda_intel.c)). |
+| 3 | Desktop Intel/AMD HDA controller with conventional analog codec, especially Realtek ALC887/892/897/1220-class boards | bind controller by `04:03`; discover codec vendor/device and widget graph through HDA verbs; exact subsystem/codec captured per board | Later physical desktop path. Choose a board with rear line-out and no mandatory vendor DSP. The HDA spec defines a discoverable controller/codec interface, but board pin routing still needs validation ([Intel HDA 1.0a](https://www.intel.la/content/dam/www/public/us/en/documents/product-specifications/high-definition-audio-specification.pdf)). |
 | 4 | Virtio-sound | Virtio device ID 25; modern PCI ID follows the standard mapping (device ID + `0x1040`, therefore `1af4:1059`) | Optional virtual fast path after common virtio. QEMU currently limits its implementation: stereo streams and unimplemented jack/channel-map properties ([OASIS Virtio 1.4](https://docs.oasis-open.org/virtio/virtio/v1.4/cs01/virtio-v1.4-cs01.html), [QEMU virtio-sound](https://www.qemu.org/docs/master/system/devices/virtio/virtio-snd.html)). |
 | 5 | GPU HDMI/DisplayPort HDA codec | GPU audio function plus display codec/pin/ELD, hot-plug and active mode | R2/later. Requires GPU/display cooperation and licensed HDMI material; not “analog HDA with a different jack.” |
 | 6 | Intel SOF/DSP, SoundWire/I2S/DMIC laptop topology | ACPI/NHLT, DSP firmware, machine driver and codec-specific bus | Later selected platforms. A visible HDA PCI function does not guarantee the laptop speakers/mics use the legacy HDA link. |
@@ -110,9 +115,9 @@ Basic audible playback is not professional audio. Do not use “pro,” “low-l
 | Stage | Deliverable | Exit evidence |
 |---|---|---|
 | R0-A | PCM format/ring API, null sink and deterministic test tone/file path | Frame/byte overflow tests, ring wrap, XRUN/disconnect generation, mixer tests off-device. |
-| R0-B | QEMU HDA CORB/RIRB, graph discovery, fixed 48-kHz stereo playback | Recorded host output hash/frequency, stream wrap, forced underrun, reset, malformed response, repeated start/stop. |
-| R0-C/R1 | QEMU capture, physical desktop rear line-out on one codec/board | Mic authorization, route/mute sequencing, jack states, cold/warm boot, MSI, 64-bit DMA, no pops/full-volume start. |
-| R1 | second HDA codec family; UAC1 simple DAC after xHCI isochronous | Descriptor fuzzing, packet-loss/XRUN, explicit rates, hub path, unplug under playback. |
+| Parallel virtual lab | QEMU HDA CORB/RIRB, graph discovery, fixed 48-kHz stereo playback | Recorded host output hash/frequency, stream wrap, forced underrun, reset, malformed response, repeated start/stop. |
+| R1 first physical audio | UAC1 simple DAC after xHCI isochronous | Descriptor fuzzing, packet-loss/XRUN, explicit rates, hub path, unplug under playback. |
+| Later desktop audio | QEMU capture, physical desktop rear line-out on one HDA codec/board | Mic authorization, route/mute sequencing, jack states, cold/warm boot, MSI, 64-bit DMA, no pops/full-volume start. |
 | R2 | UAC2 explicit feedback/duplex; virtio-sound; HDMI with one supported GPU | Clock/feedback drift, full duplex, display hot-plug/ELD, VM limitations documented. |
 | Later | SOF/SoundWire laptops, Bluetooth audio, professional mode | Firmware/license/topology gates plus measured latency/interoperability suites. |
 
@@ -131,6 +136,10 @@ OASIS Virtio 1.4 specifies sound under its Non-Assertion IPR mode and allows exp
 USB Audio 4.0 is distributed with an adopter agreement ([USB-IF Audio 4.0](https://www.usb.org/document-library/usb-audio-devices-release-40-and-adopters-agreement)); legal review is required before compliance claims. HDMI 2.2 access explicitly requires adopter licensing. Codec patent/licensing review is separate for compressed formats; basic uncompressed PCM does not justify bundling MP3/AAC/aptX/LC3 code.
 
 No community-only report drives these choices. Community device reports may identify codec quirks only after an owned reproduction and captured graph/route.
+
+## Recommended integration
+
+Carry only the staged UAC1-first ordering and device/codec test-record fields into project-owned driver plans after founder review. Do not turn HDA, HDMI audio, SoundWire, Bluetooth audio, or professional-audio goals into R0 gates.
 
 ## Source ledger contributions
 

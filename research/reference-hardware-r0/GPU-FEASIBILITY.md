@@ -19,21 +19,31 @@ This report deliberately separates five kinds of statement:
 
 ## Executive decision
 
-**PROPOSED MALRYNTH DECISION:** retain the proposed ordering:
+**PROPOSED MALRYNTH DECISION:** separate the reference-platform ranking from the later
+native-acceleration ranking:
 
-1. **R0-A primary: Intel Coffee Lake-S, Q370 commercial mATX, UHD 630 iGPU.**
+1. **R0-A primary platform: Intel Comet Lake-S/Q470E with UHD 630 iGPU.**
 2. **R0-B alternate: AMD AM4 B550 commercial mATX, Ryzen 5 5600G iGPU.**
 3. **NVIDIA: expansion-only and explicitly outside the R0 graphics contract.**
+
+For a committed native acceleration family, rank **AMD first, Intel second, NVIDIA third**.
+Intel remains a useful bounded Gen9.5 display experiment because it is already in R0-A;
+that convenience does not make it the preferred long-term accelerated family.
 
 For both R0-A and R0-B, the mandatory graphics contract ends at a UEFI GOP-provided linear framebuffer plus a CPU-rendered console/compositor. Native modesetting, GPU command submission, Vulkan, compute, and video are later and separately gated claims.
 
 | Rank | Candidate | GOP / linear framebuffer | Native display feasibility | Vulkan path | Compute / video path | R0 classification |
 |---:|---|---|---|---|---|---|
-| 1 | Intel UHD 630, Coffee Lake-S | Strong, board-firmware qualification required | Difficult, but best exact non-Linux evidence and public Gen9 material | ANV is mature; Malrynth still needs a KMD ABI and winsys | Open Intel runtimes exist, but remain separate ports with firmware and kernel dependencies | **Preferred R0-A; framebuffer-required, native acceleration exploratory** |
+| 1 | Intel UHD 630, Comet Lake-S (Gen9.5) | Strong, board-firmware qualification required | Difficult; public Gen9 material and related Coffee Lake non-Linux evidence help but do not prove the exact Comet device | ANV is mature; Malrynth still needs a KMD ABI and winsys | Open Intel runtimes exist, but remain separate ports with firmware and kernel dependencies | **Preferred R0-A platform; framebuffer-required, native acceleration exploratory** |
 | 2 | Ryzen 5 5600G integrated Radeon | Strong, board-firmware qualification required | Difficult; AMD DC is a valuable seam, but 5600G evidence outside Linux is weaker | RADV is mature; explicitly depends on amdgpu DRM uAPI and libdrm | ROCm does not validate 5600G in the current Ryzen matrices; VCN is a later project | **Accepted R0-B alternate; framebuffer-required, no acceleration promise** |
 | 3 | NVIDIA discrete, Turing or newer | Usually available through option ROM GOP, but adds another boot/display variable | Very difficult; either Linux-coupled Nouveau or GSP/OpenRM plus binary firmware | NVK is conformant on Linux, not a portable full stack | CUDA and NVENC/NVDEC remain vendor-stack dependent | **Non-R0 expansion only** |
 
-**INFERENCE:** Intel wins this R0 comparison narrowly, not because i915 is small—it is not—but because the exact Coffee Lake family has all of the following at once: an official public Coffee Lake PRM entry, mature i915/ANV reference implementations, no ANV requirement for GuC submission on this generation, exact Coffee Lake PCI IDs in Haiku’s native Intel driver, Intel-only native-GPU evidence in Redox, and current Khronos-listed Vulkan results that include UHD 630. AMD remains a credible later target because its upstream code is unusually open and Display Core has an OS-neutral boundary, but that advantage does not erase the larger firmware/IP-block bring-up surface or the absence of equivalent native 5600G evidence.
+**INFERENCE:** Intel wins the *R0 platform* comparison because UHD 630 GOP arrives with the
+Q470E CPU/board and requires no extra GPU. This is not a native-driver win. Related Coffee
+Lake evidence—public Gen9 material, i915/ANV, Haiku device coverage, Redox's Intel path and
+Khronos UHD 630 submissions—reduces uncertainty but does not prove a Comet Lake Malrynth
+port. AMD's open kernel/Mesa ecosystem and OS-neutral Display Core seam make it the preferred
+committed acceleration family despite a broader initial firmware/IP-block surface.
 
 ## The stack Malrynth would actually have to own
 
@@ -65,14 +75,14 @@ For both R0-A and R0-B, the mandatory graphics contract ends at a UEFI GOP-provi
 
 | Route | Kernel side | User side | Firmware / proprietary boundary | Portability assessment |
 |---|---|---|---|---|
-| Intel Coffee Lake | i915 display, GEM/GGTT/PPGTT, rings, contexts, interrupts, reset; Linux path is DRM/KMS | Mesa Iris/ANV; separate compute-runtime and media-driver | Gen9 DMC plus optional GuC/HuC feature paths; firmware is not host source | Best exact R0 target, still a major port |
+| Intel Comet Lake/related Gen9.5 | i915 display, GEM/GGTT/PPGTT, rings, contexts, interrupts, reset; Linux path is DRM/KMS | Mesa Iris/ANV; separate compute-runtime and media-driver | Gen9 DMC plus optional GuC/HuC feature paths; firmware is not host source | Convenient R0-A experiment, still a major port |
 | AMD 5600G-era APU | amdgpu IP-block bring-up, TTM/GPUVM, rings, scheduler, DC plus OS-dependent DM | Mesa radeonsi/RADV; separate ROCm and media stack | PSP/SMU and multiple graphics/media/display-related blobs; binary firmware license | Strong open reference, broader bring-up surface |
 | NVIDIA OpenRM route | Open GPU kernel modules’ OS-agnostic core plus a new Malrynth kernel interface and modeset integration | Matching NVIDIA UMD would still be proprietary; NVK does not target the RM uAPI upstream | Mandatory GSP firmware and release-matched vendor components | Vendor/version dependent; unsuitable for R0 |
 | NVIDIA Nouveau/NVK route | Nouveau or Nova-style Linux DRM KMD, memory, display, GSP interface | Mesa NVK/Zink | Redistributable but closed GSP; incomplete official register documentation | Open userspace, but Linux-coupled and no R0 advantage |
 
 **PROPOSED MALRYNTH DECISION:** support only one native GPU route and one exact device generation at a time. A “vendor-neutral” kernel API may be designed, but implementation work must not start as three concurrent vendor ports.
 
-## Intel: Coffee Lake UHD 630 assessment
+## Intel: Gen9.5 UHD 630 assessment
 
 ### Official openness and documentation
 
@@ -80,7 +90,11 @@ For both R0-A and R0-B, the mandatory graphics contract ends at a UEFI GOP-provi
 
 **OPEN-SOURCE IMPLEMENTATION EVIDENCE:** Linux i915 documents memory management, command submission, display and Gen9 microcontrollers. From Gen9 onward the hardware contains GuC, HuC and DMC; i915 loads their firmware. GuC can handle HuC authentication, scheduling and power functions, but the documentation says GuC use is not mandatory on all such platforms and disabling it loses features that require it ([i915 microcontrollers](https://docs.kernel.org/gpu/i915.html)). Mesa documents the hard requirement for GuC as beginning with Alder Lake-P and Arc, not Coffee Lake ([ANV](https://docs.mesa3d.org/drivers/anv.html)).
 
-**INFERENCE:** Coffee Lake is on the favorable side of Intel’s firmware-scheduler transition. A minimal display path can defer GuC submission, HuC media and deep power features. DMC still matters for supported display low-power behavior, so “firmware optional” must not be generalized into “no firmware inventory.”
+**INFERENCE:** Coffee Lake evidence is useful for the closely related Gen9.5 programming
+model, but the selected Comet Lake device and board require their own PCI ID, VBT/OpRegion,
+workaround and firmware validation. A minimal path may defer GuC submission, HuC media and
+deep power features. DMC still matters for supported display low-power behavior, so
+“firmware optional” must not become “no firmware inventory.”
 
 ### Non-Linux evidence
 
@@ -102,7 +116,9 @@ For both R0-A and R0-B, the mandatory graphics contract ends at a UEFI GOP-provi
 | Compute | **VERY DIFFICULT / LATER** | Intel’s MIT-licensed compute-runtime supports Level Zero/OpenCL and lists Coffee Lake as a legacy Gen9 platform, but it expects its kernel/user infrastructure and dependencies ([compute-runtime](https://github.com/intel/compute-runtime)). Treat it as a separate port after Vulkan isolation and recovery. |
 | Video | **VERY DIFFICULT / LATER** | Intel’s media-driver supports Coffee Lake and is MIT/BSD licensed, but uses VA-API, GmmLib and libdrm-oriented integration ([media-driver](https://github.com/intel/media-driver)). The “full feature” packaging includes closed EU shader binaries, whereas the free build has fewer features ([Intel Media SDK explanation](https://github.com/Intel-Media-SDK/MediaSDK/wiki/Intel-media-stack-on-Ubuntu)). HuC authentication adds another firmware boundary. |
 
-**PROPOSED MALRYNTH DECISION:** Intel UHD 630 is the first native-display experiment after the GOP framebuffer is solid. It is not part of R0 acceptance and must be scoped to exact PCI IDs and the exact Q370 board output topology.
+**PROPOSED MALRYNTH DECISION:** Intel UHD 630 may be a bounded native-display experiment
+after GOP is solid because it is already present. It is not R0 acceptance or a commitment to
+Intel-first acceleration; scope it to exact PCI IDs and the Q470E board output topology.
 
 ## AMD: Ryzen 5 5600G assessment
 
@@ -217,11 +233,11 @@ For both R0-A and R0-B, the mandatory graphics contract ends at a UEFI GOP-provi
 
 **Go gate:** deterministic console/compositor output for 24-hour stress, panic rendering under memory pressure, and no writes outside the recorded framebuffer.
 
-### Stage 2 — one native basic display driver: Intel UHD 630
+### Stage 2 — bounded native display experiment: Intel UHD 630
 
 **PROPOSED MALRYNTH DECISION:**
 
-- Freeze one Q370 board, one Coffee Lake UHD 630 PCI ID, one direct DisplayPort connector, one monitor/EDID and one safe 60 Hz mode.
+- Freeze one Q470E board, one Comet Lake UHD 630 PCI ID, one direct display connector, one monitor/EDID and one safe 60 Hz mode.
 - Implement probe/ownership, MMIO, VBT/OpRegion extraction, power-well prerequisites, one DDI link, one PLL, one pipe/transcoder, one primary plane, vblank interrupt and deterministic display-engine reset.
 - Initially reuse the firmware scanout allocation or a physically controlled replacement. Do not expose user command submission.
 - Load only firmware shown necessary by the selected path and record its hash/license. Defer GuC scheduling, HuC, media, PSR, FBC, deep RC states, audio, HDCP, MST, HDMI 2.0/LSPCON, multiple pipes, suspend and hot-unplug races.
@@ -256,26 +272,33 @@ For both R0-A and R0-B, the mandatory graphics contract ends at a UEFI GOP-provi
 
 **PROPOSED MALRYNTH DECISION:**
 
-1. Port AMD only after Intel establishes the native ABI’s adequacy; choose the exact 5600G/B550 board or deliberately choose a better documented AMD generation, but do not claim both.
+1. Select one AMD generation for the first committed acceleration program; the exact 5600G
+   APU is not mandatory if a discrete generation has better documentation/reset/isolation.
+   Reuse lessons from any bounded Intel experiment, but do not make AMD wait on an Intel port.
 2. Treat compute and video as independent projects with independent firmware, APIs and validation.
 3. Add NVIDIA only as a secondary adapter and first decide between the OpenRM/GSP/vendor-UMD route and Nouveau/NVK; mixing the two without an ABI decision is not a plan.
 4. Consider a LinuxKPI/DRM compatibility domain only after comparing its imported surface and update burden with a native winsys port.
 
 ## R0 hardware implications
 
-### R0-A: Q370 + Coffee Lake-S + UHD 630
+### R0-A: Q470E + Comet Lake-S + UHD 630
 
 **PROPOSED MALRYNTH DECISION:** confirm the R0-A recommendation, with the following procurement gates:
 
 - The CPU must actually include UHD 630; exclude Intel F-suffix parts and verify the exact device ID.
-- The commercial mATX board must expose the iGPU through a directly wired DisplayPort connector. Prefer native DP; avoid making HDMI 2.0 through an LSPCON/level-shifter the only output.
-- The board’s UEFI release must provide GOP with CSM disabled. Pin the exact firmware image/hash after validation; “Q370” alone does not guarantee equivalent GOP behavior.
-- Capture the board’s VBT/OpRegion and output routing in the hardware record. A generic Coffee Lake driver cannot infer board connector wiring safely.
+- The board must expose the iGPU through a directly wired, documented output. Prefer native
+  DP where the exact board offers it; avoid making an opaque converter the only path.
+- UEFI must provide GOP with CSM disabled. Pin the exact image/hash after validation;
+  “Q470E” alone does not guarantee equivalent GOP behavior.
+- Capture VBT/OpRegion and output routing in the hardware record. A generic Gen9.5 driver
+  cannot infer board connector wiring safely.
 - Record BIOS graphics-memory/DVMT settings and test defaults plus the chosen pinned value.
 - Keep a motherboard serial path or approved debug adapter available. Native display failure must never remove the primary diagnostic channel.
 - R0 acceptance requires only GOP framebuffer. Native Intel display is a post-R0 experiment, and Vulkan/compute/video are later claims.
 
-**INFERENCE:** the homogeneous 8th/9th-generation CPU choice also keeps the wider platform simpler, but the GPU-specific reason to prefer it is the mature Gen9 documentation/implementation and exact non-Linux evidence, not CPU core topology.
+**INFERENCE:** the homogeneous 10th-generation CPU choice keeps the wider platform simple.
+The GPU-specific reason is only reliable GOP plus mature Gen9.5 documentation/implementation
+evidence; related Coffee Lake non-Linux evidence is informative, not an exact-device proof.
 
 ### R0-B: B550 + Ryzen 5 5600G
 
@@ -319,9 +342,19 @@ For both R0-A and R0-B, the mandatory graphics contract ends at a UEFI GOP-provi
 
 ## Bottom line
 
-**PROPOSED MALRYNTH DECISION:** R0 should ship a graphics architecture, not promise a modern GPU driver. The architecture is: UEFI GOP capture, kernel-owned linear framebuffer, CPU console/compositor, serial authority, and a versioned future GPU boundary. Coffee Lake UHD 630 is the first native-display research target. The Ryzen 5 5600G is a second GOP platform and later AMD research target. NVIDIA remains expansion-only.
+**PROPOSED MALRYNTH DECISION:** R0 ships a graphics architecture, not a modern GPU promise:
+UEFI GOP capture, kernel-owned linear framebuffer, CPU console/compositor, serial authority
+and a versioned future GPU boundary. Comet Lake UHD 630 can host a bounded display experiment;
+AMD is the preferred first committed acceleration family; NVIDIA remains expansion-only.
 
-This ranking challenges the generic intuition that AMD must be first because amdgpu/DC/RADV are open: AMD is arguably the best broad long-term open-code reference, but the exact R0 choice favors Intel because Coffee Lake has better target-specific non-Linux evidence and a less firmware-scheduler-dependent Vulkan generation. That advantage is narrow and must be verified on the exact Q370 board; it does not convert i915/ANV into a short port.
+The two rankings answer different questions. Intel/Q470E is the safer controlled *machine*
+because its iGPU supplies GOP without another device. AMD ranks first for a future native
+*acceleration program* because amdgpu/DC/RADV provide the strongest broad open reference.
+Neither path is short, and no Vulkan conformance result transfers to Malrynth.
+
+## Recommended integration
+
+Integrate only the staged GOP-to-native-display gates, kernel/user/firmware ownership split, and stop conditions after the graphics architecture pass is complete. Do not record Intel, AMD, NVIDIA, Vulkan, compute, or video as supported based on this feasibility ranking.
 
 ## Source ledger contributions
 

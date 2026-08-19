@@ -61,7 +61,7 @@
         "ethernet": "Realtek RTL8111H",
         "usb_hub": "ASMedia ASM1074 on four rear USB 3.2 Gen1 ports"
       },
-      "driver": {"intended_driver": null, "strategy": "R0-B board candidate", "status": "investigated", "license_audit": "not_applicable"},
+      "driver": {"intended_driver": null, "strategy": "lower-cost R0-B alternate; avoid ASM1074 ports during first xHCI tests", "status": "investigated", "license_audit": "not_applicable"},
       "test": {"profile": "vendor-document review", "state": "complete", "date": "2026-08-19", "malrynth_build": null, "results": []},
       "last_reviewed": "2026-08-19"
     },
@@ -83,7 +83,7 @@
         "ethernet": "Intel I219-LM; add-in I210/I211/I350 proposed for first native driver",
         "iommu": "Intel VT-d chipset capability; exact firmware not tested"
       },
-      "driver": {"intended_driver": null, "strategy": "R0-A exact-board candidate", "status": "investigated", "license_audit": "not_applicable"},
+      "driver": {"intended_driver": null, "strategy": "used-market Intel/Q370 alternative; add verified I210-class NIC", "status": "investigated", "license_audit": "not_applicable"},
       "test": {"profile": "vendor-document review", "state": "complete", "date": "2026-08-19", "malrynth_build": null, "results": ["Physical board revision and firmware still require qualification"]},
       "last_reviewed": "2026-08-19"
     },
@@ -103,7 +103,7 @@
         "tpm": "header or platform TPM on documented examples",
         "iommu": "Intel VT-d chipset capability; exact firmware not tested"
       },
-      "driver": {"intended_driver": null, "strategy": "cleaner but potentially costlier Intel alternative", "status": "investigated", "license_audit": "not_applicable"},
+      "driver": {"intended_driver": null, "strategy": "R0-A primary family; MSI MS-98N9 is strongest debug specimen", "status": "investigated", "license_audit": "not_applicable"},
       "test": {"profile": "vendor-document review", "state": "complete", "date": "2026-08-19", "malrynth_build": null, "results": []},
       "last_reviewed": "2026-08-19"
     },
@@ -118,7 +118,7 @@
         "pci": {"vendor_id": "144d", "device_id": "a808", "subsystem_vendor_id": "144d", "subsystem_device_id": "a801", "revision_id": null, "class_code": "010802"},
         "storage": {"model": "Samsung SSD 970 EVO Plus 500GB", "serial_redacted": true, "controller_pci_id": "144d:a808", "namespace_id": null, "lba_size": null}
       },
-      "firmware": [],
+      "firmware": [{"component": "NVMe controller", "vendor": "Samsung", "version": "2B2QEXM7", "date": null, "hash": null, "redistribution": "device-resident; vendor terms"}],
       "driver": {"intended_driver": "malrynth_nvme", "strategy": "WRITE NATIVE", "status": "investigated", "license_audit": "not_started"},
       "test": {"profile": "read-only Linux inventory", "state": "complete", "date": "2026-08-19", "malrynth_build": null, "results": ["Active system disk; no destructive tests authorized"]},
       "last_reviewed": "2026-08-19"

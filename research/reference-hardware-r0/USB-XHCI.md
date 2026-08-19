@@ -88,7 +88,7 @@ Enumeration requires standard USB requests, address/configuration state, descrip
 
 ## Hardware-port qualification
 
-**OFFICIAL FACT:** the ASRock B550M Pro4 manual assigns four rear USB 3.2 Gen1 ports through an ASMedia ASM1074 hub; these should not be first ports ([ASRock B550M Pro4 manual](https://download.asrock.com/Manual/B550M%20Pro4.pdf)). The Q470E family provides chipset USB, but each exact board block diagram/manual must identify rear/internal routing. Test one physically labeled port at a time and store its root-port/hub path.
+**OFFICIAL FACT:** the ASRock B550M Pro4 manual assigns four rear USB 3.2 Gen1 ports through an ASMedia ASM1074 hub; these should not be first ports ([ASRock B550M Pro4 manual](https://download.asrock.com/Manual/B550M%20Pro4.pdf)). Q470E and the used-market Q370 alternative provide chipset USB, but each exact board block diagram/manual must identify rear/internal routing. Test one physically labeled port at a time and store its root-port/hub path.
 
 Use deliberately boring USB 2 input devices. Firmware compatibility is not proof of class compliance: firmware may emulate a keyboard through SMM before `ExitBootServices`.
 

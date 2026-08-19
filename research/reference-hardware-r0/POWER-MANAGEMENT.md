@@ -1,7 +1,7 @@
 # Desktop-first power management for MALRYNTH R0
 
 **Status:** research and acceptance policy, 2026-08-19.
-**Primary target:** Intel Coffee Lake-S/Q370.
+**Primary target:** Intel Comet Lake-S/Q470E.
 **Cross-vendor target:** AMD Cezanne/Ryzen 5 5600G/B550.
 
 ## Evidence labels
@@ -50,7 +50,7 @@ context, though parts of the platform may remain powered. [ACPI waking and sleep
 ## C1 idle first
 
 **OFFICIAL FACT:** Intel lists idle-state support and Enhanced SpeedStep for the
-[Core i5-9500](https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html).
+[Core i5-10500TE](https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html).
 Architecturally, `HLT` stops instruction execution until an enabled wake event/interrupt or
 other architecturally defined condition. Vendor manuals define deeper model-specific states.
 
@@ -131,7 +131,7 @@ HWP and non-HWP systems and coordinates policy with scheduler/load information. 
 demonstrates the need for capability probing and bounded policy, not an API to copy.
 [Linux intel_pstate](https://docs.kernel.org/admin-guide/pm/intel_pstate.html)
 
-**PROPOSED MALRYNTH DECISION:** On i5-9500, inventory CPUID, HWP capability MSRs, ACPI
+**PROPOSED MALRYNTH DECISION:** On the selected i5-10500/10500E/10500TE-class specimen, inventory CPUID, HWP capability MSRs, ACPI
 `_PSS`/`_CPC`, firmware settings and effective frequencies before selecting a backend. Prefer
 HWP only if the exact CPU/firmware exposes a coherent interface; otherwise use a validated
 legacy mechanism or leave firmware policy intact. Start with conservative minimum/maximum and
@@ -156,9 +156,10 @@ versus-latency intent. Vendor-specific register semantics stay in backends.
 
 ## Thermal safety
 
-**OFFICIAL FACT:** The i5-9500 page advertises thermal-monitoring technologies; both ASUS
-boards provide firmware monitoring/fan features. [Intel i5-9500](https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html),
-[ASUS Q370 manual](https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf)
+**OFFICIAL FACT:** The i5-10500TE page advertises thermal-monitoring technologies; the MSI
+Q470E and ASUS B550 boards provide firmware monitoring/fan features.
+[Intel i5-10500TE](https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html),
+[MSI Q470E manual](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf)
 
 **PROPOSED MALRYNTH DECISION:** R0 leaves firmware fan curves and CPU hardware thermal
 protection enabled. It logs architectural thermal status/throttling when documented, checks
@@ -214,16 +215,20 @@ serial capture; TPM/UEFI-variable persistence needs a separate wear/security pol
 | Negative AML | Timeout/error aborts before irreversible register write and returns a typed failure. |
 | Cross-vendor | Intel and AMD expose the same policy/state contract through different backends. |
 
+## Recommended integration
+
+Adopt only the R0 idle/shutdown/reboot acceptance gates and typed power-policy boundary after platform review. Keep S3/S4, advanced performance policy, and all laptop battery/EC/thermal-profile work outside R0.
+
 ## Source ledger contributions
 
 | Authority | Accessed | Claim contributed | URL | Licensing relevance |
 |---|---|---|---|---|
 | UEFI Forum | 2026-08-19 | ACPI system/device/CPU/performance states, events and sleep methods/registers | https://uefi.org/specs/ACPI/6.6/ | Specification terms; no code copied |
 | UEFI Forum | 2026-08-19 | UEFI runtime reset service | https://uefi.org/specs/UEFI/2.11/ | Specification terms; no code copied |
-| Intel | 2026-08-19 | i5-9500 idle, SpeedStep and thermal capability facts | https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html | Product facts only |
+| Intel | 2026-08-19 | i5-10500TE idle, SpeedStep and thermal capability facts | https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html | Product facts only |
 | Intel | 2026-08-19 | Architectural idle, thermal, P-state and HWP programming | https://www.intel.com/content/www/us/en/developer/articles/technical/intel-sdm.html | Documentation terms; no code copied |
 | AMD | 2026-08-19 | AMD system/performance programming model | https://docs.amd.com/v/u/en-US/24593_3.44_APM_Vol2 | Specification agreement; no code copied |
 | Linux kernel project | 2026-08-19 | Working amd-pstate/CPPC behavior | https://docs.kernel.org/admin-guide/pm/amd-pstate.html | GPL-2.0-family ecosystem; evidence only |
 | Linux kernel project | 2026-08-19 | Working Intel pstate/HWP behavior | https://docs.kernel.org/admin-guide/pm/intel_pstate.html | GPL-2.0-family ecosystem; evidence only |
-| ASUS | 2026-08-19 | Reference-board ACPI/monitoring/firmware facts | https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf | Manual facts only |
+| MSI / ASUS | 2026-08-19 | Reference-board ACPI/monitoring/firmware facts | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual/product facts only |
 | OSDev community | 2026-08-19 | Warning against partial hard-coded ACPI shutdown | https://wiki.osdev.org/Shutdown | Community evidence; no code copied |

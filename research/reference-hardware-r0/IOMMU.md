@@ -2,7 +2,7 @@
 
 **Status:** RESEARCH — proposed policy and qualification sequence; no platform is certified.
 **Research date:** 2026-08-19
-**Scope:** Intel VT-d on Coffee Lake-S/Q370 and AMD IOMMU on Ryzen 5000G/B550.
+**Scope:** Intel VT-d on Comet Lake-S/Q470E, used-market Q370 comparison, and AMD IOMMU on Ryzen 5000G/B550.
 
 ## Evidence labels
 
@@ -36,15 +36,16 @@ match the memory capabilities granted to its driver.
 
 ## Reference-platform order
 
-**OFFICIAL FACT:** Intel lists both
-[Core i5-9500](https://www.intel.com/content/www/us/en/products/sku/134895/intel-core-i59500-processor-9m-cache-up-to-4-40-ghz/specifications.html)
-and [Q370](https://www.intel.com/content/www/us/en/products/sku/133282/intel-q370-chipset/specifications.html)
-as VT-d capable. ASUS documents the exact PRIME Q370M-C/CSM board, but its product facts do
-not certify DMAR correctness or isolation topology. [ASUS board manual](https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf)
+**OFFICIAL FACT:** Intel lists Q470E and the investigated i5-10500TE as VT-d capable. MSI
+documents its Q470E MS-98N9 variant with 16550A serial and conventional PCIe/NVMe/USB.
+These facts do not certify DMAR correctness or isolation topology.
+[Intel Q470E](https://www.intel.com/content/www/us/en/products/sku/203700/intel-q470e-chipset/specifications.html),
+[Intel i5-10500TE](https://www.intel.com/content/www/us/en/products/sku/203891/intel-core-i510500te-processor-12m-cache-up-to-3-70-ghz/specifications.html),
+[MSI MS-98N9](https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf)
 
-**PROPOSED MALRYNTH DECISION:** Implement and qualify VT-d first on i5-9500/Q370 because
-both CPU and chipset explicitly advertise the facility and the board has strong serial/debug
-observability. “First” is implementation order, not an Intel-shaped generic interface.
+**PROPOSED MALRYNTH DECISION:** qualify VT-d first on the frozen Comet Lake-S/Q470E
+specimen. Coffee Lake-S/Q370 remains a used-market alternative, not the canonical platform.
+“First” is implementation order, not an Intel-shaped generic interface.
 
 **OFFICIAL FACT:** AMD's IOMMU specification defines IVRS discovery and AMD remapping; AMD's
 [AM4 chipset matrix](https://www.amd.com/en/products/processors/chipsets/am4.html) establishes
@@ -218,7 +219,7 @@ device-model or kernel implementation code.
 
 ## Physical qualification and deferrals
 
-**PROPOSED MALRYNTH DECISION:** For each frozen Q370 and B550 firmware: capture setup pages;
+**PROPOSED MALRYNTH DECISION:** For each frozen Q470E and B550 firmware, and any admitted used Q370 specimen, capture setup pages;
 hash RSDP/XSDT and DMAR/IVRS; inventory PCI topology, aliases, ACS and requester coverage under
 an established OS; then independently test blocked-domain faults, DMA read/write containment,
 MSI destination constraints, cold/warm boots and device resets under Malrynth. Established-OS
@@ -231,6 +232,10 @@ hardware identity.
 **PROPOSED MALRYNTH DECISION:** Defer PASID, ATS, PRI, Shared Virtual Addressing, nested
 translation, scalable-mode extensions, posted interrupts, peer-to-peer DMA, SR-IOV and live
 device migration. Basic group-level DMA and interrupt confinement must be proven first.
+
+## Recommended integration
+
+Carry the discovery-first, fail-closed translation stages and exact-firmware topology artifact requirements into future platform/security design only after review. Do not infer DMA isolation from a CPU feature bit, chipset name, or established-OS group dump.
 
 ## Licensing relevance
 
@@ -245,10 +250,10 @@ distinct from incorporating their code.
 |---|---|---|---|---|
 | Intel | 2026-08-19 | VT-d DMAR discovery, translation, interrupt remapping, invalidation and faults | https://www.intel.com/content/www/us/en/content-details/868911/intel-virtualization-technology-for-directed-i-o-architecture-specification.html | Proprietary specification; no code/table copied |
 | AMD | 2026-08-19 | AMD IOMMU IVRS discovery, translation, interrupt remapping, invalidation and faults | https://www.amd.com/content/dam/amd/en/documents/processor-tech-docs/specifications/48882_IOMMU.pdf | AMD specification terms; no code/table copied |
-| Intel | 2026-08-19 | Q370 and i5-9500 advertise VT-d | https://www.intel.com/content/www/us/en/products/sku/133282/intel-q370-chipset/specifications.html | Product facts only |
+| Intel | 2026-08-19 | Q470E and i5-10500TE advertise VT-d | https://www.intel.com/content/www/us/en/products/sku/203700/intel-q470e-chipset/specifications.html | Product facts only |
 | AMD | 2026-08-19 | Ryzen 5000/B550 compatibility baseline | https://www.amd.com/en/products/processors/chipsets/am4.html | Product facts only |
 | UEFI Forum | 2026-08-19 | ACPI validation and platform-description context | https://uefi.org/specs/ACPI/6.6/ | Specification terms; no code copied |
 | PCI-SIG | 2026-08-19 | PCI requester/configuration and firmware-ownership context | https://pcisig.com/specification-overview/pci-firmware | Specification/member terms; no text copied |
 | Linux kernel project | 2026-08-19 | VFIO isolation-group and protected userspace-device model evidence | https://docs.kernel.org/driver-api/vfio.html | GPL-2.0-family ecosystem; behavior only |
 | QEMU project | 2026-08-19 | Intel/AMD IOMMU and interrupt-remapping test surfaces | https://www.qemu.org/docs/master/system/qemu-manpage.html | GPL-2.0 project; test-tool use only |
-| ASUS | 2026-08-19 | Exact Q370/B550 board context | https://dlcdnets.asus.com/pub/ASUS/mb/LGA1151/PRIME_Q370M-C/E14162_PRIME_Q370M-C_UM_WEB.pdf | Manual facts only |
+| MSI / ASUS | 2026-08-19 | Exact Q470E/B550 board context | https://download.msi.com/archive/mnu_exe/ipc/MS-98N9v1.2.pdf | Manual/product facts only |
