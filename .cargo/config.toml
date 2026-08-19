@@ -1,15 +1,19 @@
 # Malrynth cargo configuration.
 #
 # This file is committed and must stay machine-independent: no absolute paths, no
-# host-specific toolchain locations, no target directory override. Developers who want
-# build output off a slow volume set CARGO_TARGET_DIR in their environment instead
-# (see docs/operations/DEVELOPMENT-ENVIRONMENT.md).
-
-[target.x86_64-unknown-none]
-# The kernel is linked at a fixed physical address by core/kernel/kernel.ld and is loaded
-# verbatim by malboot, which performs NO relocation processing. Rust defaults this target
-# to a position-independent executable (ET_DYN), which would require the loader to apply
-# R_X86_64_RELATIVE relocations before entry. Building non-PIE with a static relocation
-# model yields an ET_EXEC image whose addresses are already final, which is what the M0
-# loader contract specifies and what the loader verifies.
-rustflags = ["-C", "relocation-model=static", "-C", "link-arg=--no-pie"]
+# host-specific toolchain locations, no target directory override.
+#
+# NOTE ON RUSTFLAGS
+# -----------------
+# Deliberately empty of `rustflags`. Cargo's `RUSTFLAGS` environment variable REPLACES
+# `target.<triple>.rustflags` rather than merging with it, so flags defined here would be
+# silently dropped the moment `tools/build` sets `RUSTFLAGS` for reproducible builds.
+# Having two mechanisms that silently override each other is exactly the kind of invisible
+# failure this project refuses to ship.
+#
+# The single source of truth is `KERNEL_RUSTFLAGS` / `LOADER_RUSTFLAGS` in tools/lib.sh.
+#
+# The one property that must hold even under a bare `cargo build` -- that the kernel is a
+# non-PIE ET_EXEC image, because malboot performs no relocation -- is enforced by
+# `core/kernel/build.rs` as a link argument, which travels with the crate and cannot be
+# overridden by RUSTFLAGS. The loader independently verifies e_type at boot.

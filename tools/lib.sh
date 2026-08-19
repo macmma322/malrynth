@@ -19,6 +19,46 @@ readonly BUILD_DIR="${MALRYNTH_ROOT}/build"
 readonly TARGET_LOADER="x86_64-unknown-uefi"
 readonly TARGET_KERNEL="x86_64-unknown-none"
 
+# --- Compiler flags: single source of truth (see .cargo/config.toml) ----------------
+#
+# Path remapping makes builds reproducible across build directories. Without it the
+# absolute build path is embedded verbatim in debug information, so the same commit built
+# at two different paths produces different bytes -- which destroys the ability to use an
+# independent rebuild as evidence of pipeline integrity (docs/security/SUPPLY-CHAIN.md).
+#
+# Three path sources must be remapped: the workspace, the cargo registry, and the Rust
+# sysroot (which supplies core/alloc).
+_cargo_home="${CARGO_HOME:-${HOME}/.cargo}"
+_rust_sysroot="$(rustc --print sysroot 2>/dev/null || echo /nonexistent)"
+
+REMAP_FLAGS=(
+    "--remap-path-prefix=${MALRYNTH_ROOT}=/malrynth"
+    "--remap-path-prefix=${_cargo_home}=/cargo"
+    "--remap-path-prefix=${_rust_sysroot}=/rust"
+)
+
+# `force-frame-pointers` is required by the kernel panic backtrace, which walks the RBP
+# chain. Without it the backtrace degrades -- LOUDLY, by design: the unwinder reports that
+# the chain is implausible rather than printing plausible-looking garbage.
+#
+# `relocation-model=static` avoids GOT-relative addressing in an image that is loaded at a
+# fixed address and never relocated.
+KERNEL_RUSTFLAGS="-C relocation-model=static -C force-frame-pointers=yes ${REMAP_FLAGS[*]}"
+# `/Brepro` is the MSVC/LLD reproducible-build switch. Without it, lld-link stamps the
+# PE COFF header and the debug directory with wall-clock time, so two builds of identical
+# source differ by 10 bytes. `/Brepro` replaces the timestamp with a content hash.
+# `/PDBALTPATH` pins the PDB filename recorded in the PE debug directory. By default LLD
+# records cargo's unit filename (malboot-<hash>.pdb), and that hash varies with the build
+# path, so the recorded name -- and therefore /Brepro's content hash -- differed between
+# build directories.
+# `/DEBUG:NONE` suppresses the PE debug directory. Its CodeView GUID is derived from the
+# side PDB, whose contents embed absolute object paths that `--remap-path-prefix` cannot
+# reach (it remaps SOURCE paths, not linker output paths), leaving 8 bytes that varied
+# between build directories. No Malrynth tooling consumes PE/PDB debug info; the kernel
+# keeps full DWARF, which is what tools/symbolize actually reads.
+LOADER_RUSTFLAGS="-C link-arg=/Brepro -C link-arg=/DEBUG:NONE ${REMAP_FLAGS[*]}"
+readonly KERNEL_RUSTFLAGS LOADER_RUSTFLAGS
+
 # The exact strings the kernel emits. CI asserts on these and nothing else.
 readonly BOOT_OK_MARKER="MALRYNTH_M0_BOOT_OK"
 readonly BOOT_FAIL_MARKER="MALRYNTH_M0_BOOT_FAIL"

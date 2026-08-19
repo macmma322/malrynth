@@ -31,3 +31,12 @@ overflow-checks = true  # arithmetic overflow is a bug in a kernel, not a wrap
 
 [profile.dev]
 panic = "abort"
+
+# The loader carries no debug info, so no side PDB is generated at all. Combined with
+# `/DEBUG:NONE` and `/Brepro` (see tools/lib.sh) this makes the PE image byte-reproducible
+# across build directories -- verified by tools/check-reproducible.
+#
+# The KERNEL deliberately keeps full DWARF: it is what tools/symbolize reads to resolve a
+# panic backtrace, and the kernel ELF is byte-reproducible with debug info retained.
+[profile.release.package.malboot]
+debug = false

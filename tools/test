@@ -7,6 +7,8 @@
 #   3. host unit tests       the ABI layout assertions
 #   4. build                 loader + kernel + ESP
 #   5. boot smoke test       QEMU, repeated, asserting the exact success marker
+#   6. panic path            deliberate panic; asserts backtrace and failure marker
+#   7. reproducibility       same source at two paths must produce identical bytes
 #
 # Usage: tools/test [--boots N] [--skip-boot]
 
@@ -33,8 +35,14 @@ step() {
 
 step "formatting"       cargo fmt --all -- --check
 step "lint (abi, host)" cargo clippy -p malrynth-abi --all-targets -- -D warnings
-step "lint (loader)"    cargo clippy -p malboot --target "${TARGET_LOADER}" -- -D warnings
-step "lint (kernel)"    cargo clippy -p malrynth-kernel --target "${TARGET_KERNEL}" -- -D warnings
+step "lint (loader)"    env RUSTFLAGS="${LOADER_RUSTFLAGS}" \
+    cargo clippy -p malboot --target "${TARGET_LOADER}" -- -D warnings
+step "lint (kernel)"    env RUSTFLAGS="${KERNEL_RUSTFLAGS}" \
+    cargo clippy -p malrynth-kernel --target "${TARGET_KERNEL}" -- -D warnings
+# The panic-test configuration is compiled in CI too: a cfg that only ever builds locally
+# is a cfg that silently rots.
+step "lint (kernel, panic-test)" env RUSTFLAGS="${KERNEL_RUSTFLAGS}" \
+    cargo clippy -p malrynth-kernel --target "${TARGET_KERNEL}" --features panic-test -- -D warnings
 step "unit tests (abi)" cargo test -p malrynth-abi
 step "build"            "${MALRYNTH_ROOT}/tools/build"
 
@@ -45,8 +53,13 @@ if [[ "${SKIP_BOOT}" == "0" ]]; then
         step "boot smoke test ${i}/${BOOTS}" \
             "${MALRYNTH_ROOT}/tools/run-qemu" --timeout 60 --quiet
     done
+    # The panic path never runs during a healthy boot, so it is exercised deliberately.
+    step "panic path" "${MALRYNTH_ROOT}/tools/check-panic-path"
+
+    # Reproducibility is a claim with a test, not a claim.
+    step "reproducible build" "${MALRYNTH_ROOT}/tools/check-reproducible"
 else
-    warn "boot smoke test skipped (--skip-boot)"
+    warn "boot smoke test, panic path and reproducibility check skipped (--skip-boot)"
 fi
 
 echo

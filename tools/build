@@ -19,10 +19,12 @@ PROFILE_FLAG="--release"
 need_cmd cargo
 
 info "building loader (${TARGET_LOADER}, ${PROFILE})"
-cargo build -p malboot --target "${TARGET_LOADER}" ${PROFILE_FLAG}
+RUSTFLAGS="${LOADER_RUSTFLAGS}" \
+    cargo build -p malboot --target "${TARGET_LOADER}" ${PROFILE_FLAG}
 
 info "building kernel (${TARGET_KERNEL}, ${PROFILE})"
-cargo build -p malrynth-kernel --target "${TARGET_KERNEL}" ${PROFILE_FLAG}
+RUSTFLAGS="${KERNEL_RUSTFLAGS}" \
+    cargo build -p malrynth-kernel --target "${TARGET_KERNEL}" ${PROFILE_FLAG}
 
 LOADER="${CARGO_TARGET_DIR}/${TARGET_LOADER}/${PROFILE}/malboot.efi"
 KERNEL="${CARGO_TARGET_DIR}/${TARGET_KERNEL}/${PROFILE}/malrynth-kernel"
