@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Verifies that Malrynth builds are byte-reproducible across build directories.
+#
+# This is the control that makes an independent rebuild usable as EVIDENCE: if someone
+# else builds the same commit and gets different bytes, the pipeline is suspect
+# (docs/security/SUPPLY-CHAIN.md). A reproducibility claim with no test is a wish, so this
+# check exists specifically so the property cannot regress silently.
+#
+# Method: copy the source tree to a second path with a deliberately different length,
+# build both, compare image hashes.
+#
+# Usage: tools/check-reproducible
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+
+need_cmd sha256sum
+WORK="$(mktemp -d)"
+# The alternate path is intentionally a different LENGTH: path length is what exposes
+# embedded-path non-determinism, since equal-length paths can mask it.
+ALT="${WORK}/malrynth-alternate-build-path-for-reproducibility-check"
+cleanup() { rm -rf "${WORK}"; }
+trap cleanup EXIT
+
+info "building at primary path"
+"${MALRYNTH_ROOT}/tools/build" >/dev/null
+
+info "copying sources to ${ALT}"
+mkdir -p "${ALT}"
+tar -C "${MALRYNTH_ROOT}" \
+    --exclude=./target --exclude=./esp --exclude=./build --exclude=./.git \
+    -cf - . | tar -C "${ALT}" -xf -
+
+info "building at alternate path"
+(cd "${ALT}" && ./tools/build >/dev/null)
+
+status=0
+for rel in "malrynth/kernel.elf" "EFI/BOOT/BOOTX64.EFI"; do
+    a="${ESP_DIR}/${rel}"
+    b="${ALT}/esp/${rel}"
+    ha="$(sha256sum "$a" | cut -d' ' -f1)"
+    hb="$(sha256sum "$b" | cut -d' ' -f1)"
+    if [[ "$ha" == "$hb" ]]; then
+        ok "$(printf '%-24s %s' "${rel}" "${ha:0:16}...")"
+    else
+        fail "$(printf '%-24s DIFFERS' "${rel}")"
+        fail "  primary   ${ha}"
+        fail "  alternate ${hb}"
+        fail "  differing bytes: $(cmp -l "$a" "$b" 2>/dev/null | wc -l)"
+        status=1
+    fi
+done
+
+if (( status == 0 )); then
+    ok "builds are reproducible across build directories"
+else
+    fail "builds are NOT reproducible -- an independent rebuild cannot be used as evidence"
+fi
+exit "${status}"

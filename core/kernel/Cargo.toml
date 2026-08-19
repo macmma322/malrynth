@@ -17,5 +17,10 @@ bench = false
 # The kernel has ZERO external dependencies and is expected to keep that property for as
 # long as it is practical. Every crate added here runs in ring 0. See
 # docs/security/SUPPLY-CHAIN.md and THIRD_PARTY.md.
+[features]
+# Makes the kernel panic deliberately after boot, so the panic path and backtrace can be
+# tested. NEVER enabled for a shipped kernel; used only by tools/test.
+panic-test = []
+
 [dependencies]
 malrynth-abi = { workspace = true }

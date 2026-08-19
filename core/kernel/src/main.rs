@@ -24,6 +24,7 @@
 #![deny(missing_docs)]
 
 mod arch;
+mod debug;
 mod serial;
 
 use arch::x86_64::halt_forever;
@@ -37,6 +38,10 @@ const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "-dev");
 ///
 /// The test must never pass merely because QEMU exited. It passes only if this exact
 /// string is observed on the serial console.
+///
+/// Gated out under `panic-test`, where the kernel is expected to panic and must never be
+/// able to emit a success marker even by accident.
+#[cfg(not(feature = "panic-test"))]
 const BOOT_OK_MARKER: &str = "MALRYNTH_M0_BOOT_OK";
 
 /// Emitted on any fault path so the smoke test can fail fast rather than wait for timeout.
@@ -122,12 +127,25 @@ pub unsafe extern "sysv64" fn _start(boot_info: *const BootInfo) -> ! {
     report_image_extent(info);
 
     println!("kernel entered successfully");
-    println!();
-    println!("{BOOT_OK_MARKER}");
+
+    // The panic path is a correctness-critical path that is never exercised by a healthy
+    // boot, so it is tested deliberately rather than assumed to work. Enabled only by the
+    // `panic-test` cargo feature, which is never set for a shipped kernel.
+    #[cfg(feature = "panic-test")]
+    {
+        println!();
+        println!("panic-test: deliberately panicking to exercise the panic path");
+        provoke_panic();
+    }
 
     // M0 terminates here by design. M1 replaces this with physical memory management,
     // paging, exceptions, interrupts, timers and SMP bring-up.
-    halt_forever();
+    #[cfg(not(feature = "panic-test"))]
+    {
+        println!();
+        println!("{BOOT_OK_MARKER}");
+        halt_forever();
+    }
 }
 
 /// Reports the normalised memory map handed over by the loader.
@@ -217,6 +235,17 @@ fn report_image_extent(info: &BootInfo) {
     );
 }
 
+/// Calls through two frames so the test backtrace has something to walk.
+#[cfg(feature = "panic-test")]
+#[inline(never)]
+fn provoke_panic() -> ! {
+    #[inline(never)]
+    fn inner() -> ! {
+        panic!("panic-test: this panic is intentional");
+    }
+    inner()
+}
+
 /// Zeroes the `.bss` section.
 ///
 /// # Safety
@@ -241,6 +270,8 @@ unsafe fn zero_bss() {
 /// and must not itself panic.
 #[panic_handler]
 fn panic(info: &PanicInfo<'_>) -> ! {
+    let backtrace = debug::capture();
+
     println!();
     println!("KERNEL PANIC");
     if let Some(location) = info.location() {
@@ -252,6 +283,11 @@ fn panic(info: &PanicInfo<'_>) -> ! {
         );
     }
     println!("  {}", info.message());
+
+    // Captured at handler entry, before any printing perturbs the stack, so the trace
+    // reflects the panic site rather than the panic handler's own frames.
+    debug::print(&backtrace);
+
     println!("{BOOT_FAIL_MARKER}");
     halt_forever();
 }

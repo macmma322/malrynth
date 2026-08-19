@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""Resolve Malrynth kernel backtrace addresses to function names.
+
+The kernel prints raw return addresses on panic rather than carrying a symbol table and a
+DWARF parser in ring 0 (see core/kernel/src/debug/mod.rs). This tool does the resolution on
+the host, against the kernel ELF that produced those addresses.
+
+It parses the ELF symbol table directly. `nm`/`llvm-nm` are NOT required -- neither is
+installed on the reference host, and adding a binutils dependency to read a table this
+simple would be a poor trade.
+
+Usage:
+    tools/symbolize 0x10000abc 0x10001234
+    tools/symbolize --kernel path/to/kernel.elf 0x10000abc
+    ./tools/run-qemu | tools/symbolize          # reads a backtrace block from stdin
+
+Exit status: 0 on success, 1 if the kernel image or input could not be read.
+"""
+
+from __future__ import annotations
+
+import argparse
+import re
+import struct
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_KERNEL = ROOT / "esp" / "malrynth" / "kernel.elf"
+
+SHT_SYMTAB = 2
+STT_FUNC = 2
+PT_LOAD = 1
+
+
+class ElfError(RuntimeError):
+    pass
+
+
+def read_symbols(path: Path) -> list[tuple[int, int, str]]:
+    """Return (address, size, name) for every function symbol, sorted by address."""
+    data = path.read_bytes()
+    if len(data) < 64 or data[:4] != b"\x7fELF":
+        raise ElfError(f"{path}: not an ELF file")
+    if data[4] != 2 or data[5] != 1:
+        raise ElfError(f"{path}: not 64-bit little-endian ELF")
+
+    e_shoff, = struct.unpack_from("<Q", data, 0x28)
+    e_shentsize, e_shnum = struct.unpack_from("<HH", data, 0x3A)
+    if e_shoff == 0 or e_shnum == 0:
+        raise ElfError(f"{path}: no section headers (was the binary stripped?)")
+
+    sections = []
+    for i in range(e_shnum):
+        off = e_shoff + i * e_shentsize
+        sh_type, = struct.unpack_from("<I", data, off + 4)
+        sh_offset, sh_size = struct.unpack_from("<QQ", data, off + 0x18)
+        sh_link, = struct.unpack_from("<I", data, off + 0x28)
+        sh_entsize, = struct.unpack_from("<Q", data, off + 0x38)
+        sections.append((sh_type, sh_offset, sh_size, sh_link, sh_entsize))
+
+    symbols: list[tuple[int, int, str]] = []
+    for sh_type, sh_offset, sh_size, sh_link, sh_entsize in sections:
+        if sh_type != SHT_SYMTAB or sh_entsize == 0:
+            continue
+        _, str_off, str_size, _, _ = sections[sh_link]
+        strtab = data[str_off:str_off + str_size]
+
+        for j in range(sh_size // sh_entsize):
+            off = sh_offset + j * sh_entsize
+            st_name, st_info = struct.unpack_from("<IB", data, off)
+            st_value, st_size = struct.unpack_from("<QQ", data, off + 8)
+            if (st_info & 0xF) != STT_FUNC or st_value == 0:
+                continue
+            end = strtab.find(b"\0", st_name)
+            name = strtab[st_name:end].decode("utf-8", "replace")
+            if name:
+                symbols.append((st_value, st_size, name))
+
+    if not symbols:
+        raise ElfError(f"{path}: no function symbols found")
+    symbols.sort(key=lambda s: s[0])
+    return symbols
+
+
+def image_range(path: Path) -> tuple[int, int]:
+    """Return the [lowest, highest) virtual address covered by PT_LOAD segments.
+
+    Used to tell two very different situations apart: an address the kernel image simply
+    does not contain (a malboot or firmware frame -- expected, and not a failure), versus an
+    address inside the kernel that no symbol covers (a genuine resolution gap).
+    """
+    data = path.read_bytes()
+    e_phoff, = struct.unpack_from("<Q", data, 0x20)
+    e_phentsize, e_phnum = struct.unpack_from("<HH", data, 0x36)
+    low, high = None, 0
+    for i in range(e_phnum):
+        off = e_phoff + i * e_phentsize
+        p_type, = struct.unpack_from("<I", data, off)
+        if p_type != PT_LOAD:
+            continue
+        p_vaddr, = struct.unpack_from("<Q", data, off + 0x10)
+        p_memsz, = struct.unpack_from("<Q", data, off + 0x28)
+        low = p_vaddr if low is None else min(low, p_vaddr)
+        high = max(high, p_vaddr + p_memsz)
+    return (low or 0), high
+
+
+def resolve(symbols: list[tuple[int, int, str]], address: int) -> tuple[str, int] | None:
+    """Map an address to (name, offset_into_function), or None."""
+    lo, hi = 0, len(symbols) - 1
+    best = None
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if symbols[mid][0] <= address:
+            best = mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    if best is None:
+        return None
+    start, size, name = symbols[best]
+    # A zero-size symbol carries no extent, so accept it only as a best-effort match.
+    if size and address >= start + size:
+        return None
+    return name, address - start
+
+
+# A backtrace line as the kernel prints it: "  #0  0x0000000010000482".
+BACKTRACE_LINE = re.compile(r"^\s*#\d+\s+0x([0-9a-fA-F]{8,16})\s*$")
+
+def _demangle_v0(mangled: str) -> str | None:
+    """Extract the path components of a Rust v0 (RFC 2603) mangled symbol.
+
+    This walks the encoding rather than pattern-matching it. A regex that simply looks for
+    `<digits><identifier>` gets this WRONG, because v0 contains two constructs whose
+    base-62 payloads can begin with digits and be mistaken for length prefixes:
+
+        <disambiguator> ::= "s" <base-62> "_"
+        <backref>       ::= "B" <base-62> "_"
+
+    Misreading either produces a plausible-looking but incorrect function name -- exactly
+    the failure mode a backtrace must not have.
+
+    Identifiers are `["u"] <decimal-length> ["_"] <bytes>`, where the `_` separator appears
+    when the identifier itself starts with `_` or a digit.
+
+    Returns None if the symbol does not parse, so the caller can fall back.
+    """
+    s = mangled[2:]  # strip the "_R" prefix
+    segments: list[str] = []
+    i = 0
+    while i < len(s):
+        c = s[i]
+
+        # Disambiguators and backrefs: skip the tag and its base-62 payload up to "_".
+        if c in ("s", "B"):
+            j = s.find("_", i + 1)
+            if j == -1:
+                break
+            i = j + 1
+            continue
+
+        if c.isdigit():
+            j = i
+            while j < len(s) and s[j].isdigit():
+                j += 1
+            length = int(s[i:j])
+            # Optional "_" separator before the identifier bytes.
+            if j < len(s) and s[j] == "_":
+                j += 1
+            if length <= 0 or j + length > len(s):
+                break
+            segments.append(s[j:j + length])
+            i = j + length
+            continue
+
+        # Any other byte is a namespace/type/encoding tag with no payload here.
+        i += 1
+
+    return "::".join(segments) if segments else None
+
+
+def demangle(name: str) -> str:
+    """Render a Rust symbol readably.
+
+    Handles both mangling schemes, without pulling in a demangler dependency:
+      * v0     `_R...`  -- walk the encoding (see `_demangle_v0`)
+      * legacy `_ZN..E` -- strip the trailing `::h<16 hex>` hash, which is pure noise
+    """
+    if name.startswith("_R"):
+        if (rendered := _demangle_v0(name)) is not None:
+            return rendered
+    return re.sub(r"::h[0-9a-f]{16}$", "", name)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="Resolve Malrynth kernel backtrace addresses to function names.")
+    parser.add_argument("addresses", nargs="*",
+                        help="addresses in hex (0x-prefixed) or decimal")
+    parser.add_argument("--kernel", type=Path, default=DEFAULT_KERNEL,
+                        help=f"kernel ELF to resolve against (default: {DEFAULT_KERNEL})")
+    args = parser.parse_args()
+
+    addresses = [int(a, 0) for a in args.addresses]
+    if not addresses:
+        # Accept a pasted backtrace block, so the workflow is copy-paste rather than retype.
+        text = sys.stdin.read()
+        # Only lines from a printed backtrace block are addresses. Scraping every hex
+        # number in the serial log would also pick up memory-map and framebuffer
+        # addresses and resolve them to nonsense.
+        addresses = [int(m.group(1), 16)
+                     for line in text.splitlines()
+                     if (m := BACKTRACE_LINE.match(line))]
+        if not addresses:
+            print("no backtrace block found on stdin.\n"
+                  "Expected lines of the form:  #0  0x0000000010000abc",
+                  file=sys.stderr)
+            return 1
+
+    if not args.kernel.exists():
+        print(f"kernel image not found: {args.kernel}\n"
+              f"build it first with tools/build", file=sys.stderr)
+        return 1
+
+    try:
+        symbols = read_symbols(args.kernel)
+    except ElfError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    low, high = image_range(args.kernel)
+    print(f"resolving against {args.kernel}")
+    print(f"  image {low:#x}..{high:#x}, {len(symbols)} function symbols")
+
+    unresolved = 0
+    for index, address in enumerate(addresses):
+        if not (low <= address < high):
+            # Frames below the kernel belong to malboot or firmware. This is normal: the
+            # chain walks out of the kernel and into whoever called it.
+            print(f"  #{index}  {address:#018x}  <outside kernel image: loader/firmware frame>")
+            continue
+        hit = resolve(symbols, address)
+        if hit is None:
+            print(f"  #{index}  {address:#018x}  <no symbol covers this address>")
+            unresolved += 1
+        else:
+            name, offset = hit
+            print(f"  #{index}  {address:#018x}  {demangle(name)}+{offset:#x}")
+
+    if unresolved:
+        print(f"\nNote: {unresolved} in-image address(es) had no covering symbol. The "
+              f"release profile uses fat LTO and --gc-sections, which merges and discards "
+              f"many function symbols, so some frames land in code with no symbol of its "
+              f"own. Frames are matched to the nearest preceding symbol that still covers "
+              f"them; treat names as approximate.", file=sys.stderr)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

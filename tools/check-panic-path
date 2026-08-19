@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+# Verifies the kernel panic path end to end.
+#
+# The panic handler is correctness-critical and is never exercised by a healthy boot, so
+# without a deliberate test it is code that has never run. This builds the kernel with the
+# `panic-test` feature, boots it, and asserts that the kernel:
+#
+#   * reports the panic with a source location,
+#   * prints a backtrace with more than one frame,
+#   * emits the FAILURE marker and never the success marker,
+#   * produces addresses that tools/symbolize can resolve.
+#
+# The normal kernel is rebuilt afterwards so the ESP is never left holding a test image.
+#
+# Usage: tools/check-panic-path
+
+source "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+
+need_cmd cargo
+need_cmd python3
+
+restore() {
+    info "restoring the normal kernel image"
+    "${MALRYNTH_ROOT}/tools/build" >/dev/null 2>&1 || true
+}
+trap restore EXIT
+
+info "building kernel with panic-test"
+RUSTFLAGS="${KERNEL_RUSTFLAGS}" cargo build \
+    -p malrynth-kernel --target "${TARGET_KERNEL}" --release --features panic-test >/dev/null
+
+cp -f "${CARGO_TARGET_DIR}/${TARGET_KERNEL}/release/malrynth-kernel" \
+      "${ESP_DIR}/malrynth/kernel.elf"
+
+info "booting the panic-test kernel (expected to FAIL)"
+# run-qemu returns non-zero on the failure marker, which is the expected outcome here.
+"${MALRYNTH_ROOT}/tools/run-qemu" --timeout 60 --quiet >/dev/null 2>&1 || true
+
+LOG="${BUILD_DIR}/serial.log"
+[[ -f "${LOG}" ]] || die "no serial log produced"
+CLEAN="$(sed -e 's/\x1b\[[0-9;]*[A-Za-z]//g' -e 's/\x1b\[=[0-9]*h//g' "${LOG}")"
+
+failures=0
+expect() {  # expect <description> <grep-pattern>
+    if grep -qE "$2" <<< "${CLEAN}"; then ok "$1"; else fail "$1"; failures=$((failures + 1)); fi
+}
+reject() {
+    if grep -qE "$2" <<< "${CLEAN}"; then fail "$1"; failures=$((failures + 1)); else ok "$1"; fi
+}
+
+expect "panic reported"                 '^KERNEL PANIC'
+expect "panic source location reported" '^  at .*\.rs:[0-9]+:[0-9]+'
+expect "panic message reported"         'panic-test: this panic is intentional'
+expect "backtrace printed"              '^backtrace:'
+expect "failure marker emitted"         "${BOOT_FAIL_MARKER}"
+reject "success marker NOT emitted"     "${BOOT_OK_MARKER}"
+
+# A single frame would mean the walk failed immediately; a real chain has several.
+frames=$(grep -cE '^[[:space:]]*#[0-9]+[[:space:]]+0x[0-9a-f]{16}[[:space:]]*$' <<< "${CLEAN}" || true)
+if (( frames >= 2 )); then
+    ok "backtrace has ${frames} frames"
+else
+    fail "backtrace has ${frames} frame(s); expected at least 2"
+    failures=$((failures + 1))
+fi
+reject "frame chain was plausible" 'no plausible frame chain'
+
+if "${MALRYNTH_ROOT}/tools/symbolize" <<< "${CLEAN}" | grep -qE '\+0x[0-9a-f]+$'; then
+    ok "symbolize resolved at least one frame"
+else
+    fail "symbolize resolved no frames"
+    failures=$((failures + 1))
+fi
+
+echo
+if (( failures == 0 )); then
+    ok "panic path verified"
+    exit 0
+fi
+fail "${failures} panic-path check(s) failed"
+exit 1
