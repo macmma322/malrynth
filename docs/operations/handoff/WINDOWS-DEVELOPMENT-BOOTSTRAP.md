@@ -8,6 +8,25 @@ Companion document: [`WINDOWS-MIGRATION-2026-08-20.md`](WINDOWS-MIGRATION-2026-0
 
 ---
 
+## 0. Canonical workspace paths
+
+| Host | Workspace | Status |
+|---|---|---|
+| Linux laptop | `/media/Data/Malrynth` | **Historical** — the pre-migration workspace; fallback only (§7) |
+| Windows 11 PC | `D:\Malrynth` | **Canonical** — the required Windows workspace |
+| The same checkout seen from WSL2 | `/mnt/d/Malrynth` | Mount of the line above, not a second checkout |
+
+`D:\Malrynth` **is** the repository root. Do not nest a second directory inside it —
+`D:\Malrynth\malrynth` is wrong.
+
+**This is a developer-machine convention, not an architectural dependency.** `D:\Malrynth` must
+never be hard-coded into kernel source, build output, manifests, package metadata, the ABI,
+runtime code, tests, CI, or reproducible-build inputs. The build tooling must keep working from
+an arbitrary clone path. If `D:` is genuinely unavailable on some future machine, pick another
+root — the repository does not care, and must never be made to.
+
+---
+
 ## 1. Blunt assessment first
 
 **The Malrynth developer tooling is Linux-shaped in practice.** All twelve scripts are
@@ -83,7 +102,7 @@ specifically — but it is not evidence they work on Windows.
 ### Recommended: source on Windows, build inside WSL2
 
 ```
-D:\Malrynth                 ← git clone here (Windows-side, easy to back up and browse)
+D:\Malrynth                 ← canonical workspace (§0); clone here, Windows-side
    accessed from WSL as /mnt/d/Malrynth
 CARGO_TARGET_DIR=~/.cache/malrynth-target   ← inside WSL, on ext4
 ```
@@ -99,14 +118,12 @@ where `tools/doctor` warns about it explicitly. Keeping `target/` on WSL's own e
 `.cargo/config.toml` — it is a per-machine absolute path and would break every other machine.
 The repository refuses this on purpose.
 
-### Alternative: everything inside WSL2
+### No longer an alternative: source inside WSL2
 
-```
-~/Malrynth  (WSL ext4)  ← fastest; Windows access via \\wsl$\...
-```
-
-Fastest and simplest, at the cost of the source being less convenient to browse and back up
-from Windows.
+An earlier draft offered `~/Malrynth` on WSL ext4 as an equally valid arrangement. It is not.
+Putting the source there would create a second checkout to keep straight and would sit outside
+the canonical workspace. **There is one canonical source checkout — `D:\Malrynth` (§0).** Only
+the build cache lives on ext4.
 
 ### Not recommended yet: native Windows tooling
 
@@ -114,12 +131,16 @@ Would require rewriting or dual-implementing most of `tools/`. That is a real pr
 value — but it is **not** a migration task, and doing it under migration pressure is how
 tooling quietly loses its guarantees.
 
-### Path recommendation
+### Path decision (settled)
 
-`D:\Malrynth` is a reasonable choice; `D:\Projects\Malrynth` is equally fine. **Decide when you
-sit down** — nothing in the repository hard-codes a path, and nothing should. Avoid paths with
-spaces or non-ASCII characters; several scripts quote correctly but this has not been tested on
-Windows.
+**The canonical Windows workspace is `D:\Malrynth` (§0).** This is no longer an open choice to
+be made when you sit down. `D:\Projects\Malrynth`, `C:\Malrynth`, profile-relative roots such as
+`C:\Users\<user>\...`, and dynamically selected project roots are **not** alternatives and must
+not be recommended unless `D:` is genuinely unavailable on the target machine.
+
+The decision binds the *developer machine only*. Nothing in the repository hard-codes a path and
+nothing may start to (§0). Avoid paths with spaces or non-ASCII characters; several scripts quote
+correctly but this has not been tested on Windows.
 
 ---
 
@@ -127,11 +148,24 @@ Windows.
 
 ### Step 1 — clone (PowerShell)
 
+This is the shortest complete Windows resume sequence. Use it verbatim.
+
 ```powershell
-cd D:\
-git clone https://github.com/macmma322/malrynth.git
-cd malrynth
+D:
+cd \
+git clone https://github.com/macmma322/malrynth.git Malrynth
+cd D:\Malrynth
 git fetch --all --tags --prune
+```
+
+The explicit `Malrynth` target argument is load-bearing: `git clone <url>` with no target
+derives the directory from the URL and would produce `D:\malrynth`, which is not the canonical
+workspace (§0).
+
+Confirm the root before doing anything else:
+
+```powershell
+(Get-Location).Path     # must be exactly: D:\Malrynth
 ```
 
 ### Step 2 — verify you have everything
@@ -176,7 +210,7 @@ spurious mode changes, set it.
 sudo apt update && sudo apt install -y qemu-system-x86 ovmf build-essential
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
-cd /mnt/d/malrynth
+cd /mnt/d/Malrynth
 export CARGO_TARGET_DIR="$HOME/.cache/malrynth-target"   # add to ~/.bashrc
 
 ./tools/bootstrap     # toolchain + targets + hooks
@@ -190,22 +224,34 @@ authoritative list.
 
 ### Step 6 — worktrees (only if you want parallel branches)
 
-**A branch already checked out somewhere cannot be checked out again.** After Step 3 the main
-clone holds `handoff/windows-migration-2026-08-20`, so switch it to whichever branch you
+**A branch already checked out somewhere cannot be checked out again.** After Step 3 the primary
+repository holds `handoff/windows-migration-2026-08-20`, so switch it to whichever branch you
 actually want to work on first, then add worktrees for the others.
 
+Worktrees use clear sibling directories on `D:`. They are worktrees of the **same** repository —
+not separate clones, and not independent Malrynth projects.
+
+| Directory | Role |
+|---|---|
+| `D:\Malrynth` | **Primary** repository — the canonical workspace (§0) |
+| `D:\Malrynth-Claude` | Temporary Claude worktree, only if one is needed |
+| `D:\Malrynth-Codex-R0` | R0 hardware-research worktree, to inspect or continue that work |
+| `D:\Malrynth-Codex-<topic>` | Future isolated Codex research |
+
+Do not create any of them unless parallel work actually requires it.
+
 ```powershell
-# main clone -> the branch you will work on
+# primary repository -> the branch you will work on
 git checkout docs/platform-foundation
 
 # R0 research alongside it
 git worktree add D:\Malrynth-Codex-R0 research/reference-hardware-r0
 
-# and if you want main checked out at the same time
-git worktree add D:\Malrynth-main main
-
 git worktree list
 ```
+
+Check branch availability before adding a worktree; a branch already checked out in the primary
+repository cannot be taken by a second worktree.
 
 ### Alternative: single-clone workflow (recommended if you are not running parallel agents)
 
