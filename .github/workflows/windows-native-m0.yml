@@ -1,0 +1,117 @@
+name: Windows native M0
+
+# Experimental consumer CI for feature/windows-native-tooling-spike. This proves the
+# native build path on a clean Windows host; QEMU/OVMF boot remains deliberately out of scope.
+on:
+  push:
+    branches: [ci/windows-native-m0]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_TOOLCHAIN: 1.97.1
+
+jobs:
+  verify:
+    name: Native build and tooling
+    runs-on: windows-2025
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        # actions/checkout v7.0.1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Identify clean host
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ComputerInfo -Property WindowsProductName, WindowsVersion, OsBuildNumber, OsArchitecture
+          git --version
+          python --version
+          rustup --version
+
+      - name: Install pinned Rust toolchain
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          rustup toolchain install $env:RUST_TOOLCHAIN `
+            --profile minimal `
+            --component rustfmt,clippy `
+            --target x86_64-unknown-uefi,x86_64-unknown-none
+          if ($LASTEXITCODE -ne 0) { throw "Failed to install Rust $env:RUST_TOOLCHAIN" }
+          rustup override set $env:RUST_TOOLCHAIN
+          if ($LASTEXITCODE -ne 0) { throw "Failed to select Rust $env:RUST_TOOLCHAIN" }
+          rustup show active-toolchain
+          rustc --version
+          cargo --version
+          rustup component list --installed
+          rustup target list --installed
+
+      - name: Doctor (boot environment informational)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          python tools/windows/malrynth.py doctor
+          $doctorExit = $LASTEXITCODE
+          Write-Host "Doctor exit code: $doctorExit"
+          Write-Host "QEMU and OVMF are optional in Windows native M0 build CI; boot is not exercised."
+          if ($doctorExit -notin 0, 1) { throw "Doctor failed unexpectedly with exit code $doctorExit" }
+          exit 0
+
+      - name: Repository hygiene
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git diff --check
+
+      - name: Scan for secrets with Git Bash
+        shell: bash
+        run: ./tools/scan-secrets
+
+      - name: Windows tooling tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python -m unittest discover -s tests/windows-tooling -p "test_*.py" -v
+          if ($LASTEXITCODE -ne 0) { throw "Windows tooling tests failed" }
+
+      - name: Native Windows M0 build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python tools/windows/malrynth.py build
+          if ($LASTEXITCODE -ne 0) { throw "Native Windows M0 build failed" }
+
+      - name: Verify artifacts and report hashes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python tools/windows/malrynth.py verify
+          if ($LASTEXITCODE -ne 0) { throw "Artifact structural verification failed" }
+
+          $loader = 'esp\EFI\BOOT\BOOTX64.EFI'
+          $kernel = 'esp\malrynth\kernel.elf'
+          foreach ($artifact in @($loader, $kernel)) {
+            if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) {
+              throw "Required artifact missing: $artifact"
+            }
+            $item = Get-Item -LiteralPath $artifact
+            if ($item.Length -le 0) { throw "Required artifact is empty: $artifact" }
+            $hash = Get-FileHash -LiteralPath $artifact -Algorithm SHA256
+            Write-Host "$artifact size=$($item.Length) sha256=$($hash.Hash.ToLowerInvariant())"
+          }
+
+          if (Test-Path -LiteralPath 'build\size-report.txt') {
+            Get-Content -LiteralPath 'build\size-report.txt'
+          }
