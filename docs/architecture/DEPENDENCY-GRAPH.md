@@ -53,18 +53,32 @@ kernel (M1) ──> ACPI ──> PCIe ──> IOMMU ──> device manager ─�
 processes + IPC + capabilities (M3)
    └─> VFS + program loader (M5)
         └─> executable format + dynamic loader (M5)
-             └─> libc  ◄── UNSOLVED, and it blocks everything downstream
+             ├─> native runtime API (libmalrynth)  ◄── the platform boundary; needs no libc
+             │    └─> Rust no_std + alloc userspace
+             │         └─> frameworks (UI, media, storage clients)
+             │              └─> application framework
+             │                   └─> SDK ──> applications (first-party and third-party alike)
+             │
+             └─> libc  ◄── UNSOLVED; gates the C / POSIX / Rust-std ecosystem
                   ├─> POSIX facade ──> Unix software ports
-                  ├─> Rust std port ──> Rust ecosystem
-                  └─> native runtime API
-                       └─> frameworks (UI, media, storage clients)
-                            └─> application framework
-                                 └─> SDK ──> first-party apps ──> third-party apps
+                  ├─> Rust std port ──> crates that require std
+                  ├─> C / C++ SDK surface
+                  └─> Wine / Proton
 ```
 
-**The libc decision is the highest-leverage unresolved item in the project.** It gates POSIX,
-Rust `std`, the SDK, every application, and all of Wine/Proton. See
-[`LIBC-STRATEGY.md`](../runtime/LIBC-STRATEGY.md) and
+**The libc decision is the highest-leverage unresolved item in the project** — but it gates
+*ecosystem reach*, not the existence of userspace. It gates POSIX, Rust `std`, the C/C++ SDK
+surface, every **ported** application, and all of Wine/Proton.
+
+**It is not the root prerequisite for native Malrynth userspace.** `libmalrynth` is the real
+platform boundary and libc is a consumer sitting *on top of* it, never beside it
+([`LIBC-STRATEGY.md`](../runtime/LIBC-STRATEGY.md), non-negotiable constraints). A native
+Malrynth application written in Rust against `no_std` + `alloc` therefore depends on the runtime
+API, the loader and the frameworks — not on [Q1](OPEN-QUESTIONS.md) being answered. Drawing libc
+as the root of the whole application tree understates what can be built before the libc decision
+lands, and silently promotes a C-ecosystem question into a platform-existence question.
+
+See [`LIBC-STRATEGY.md`](../runtime/LIBC-STRATEGY.md) and
 [`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) Q1.
 
 ## Graphics chain

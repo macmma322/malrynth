@@ -45,6 +45,12 @@ Third-party stores use the **same package format, the same signature verificatio
 capability model**. They are not second-class: no private API, no artificial friction beyond
 what security requires.
 
+Installing packages requires the **package authority** role
+([`NATIVE-APPLICATION-MODEL.md`](../apps/NATIVE-APPLICATION-MODEL.md)). That role is role-based,
+not identity-based: a third-party store can hold it on exactly the same terms as the first-party
+store, and holding it is explicit, narrow and auditable rather than ambient. Parity here means
+**equal access to the role**, not that package installation is an ordinary capability.
+
 Sideloading may require an explicit informed action. It may not be impossible.
 
 ## Economics

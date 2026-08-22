@@ -4,7 +4,7 @@
 
 ## The premise
 
-> **Malrynth is not writing a complete modern browser engine for v1.**
+> **Malrynth is not writing a complete modern browser engine for the M7 Developer OS.**
 
 A competitive engine is a multi-thousand-engineer-year effort spanning HTML, CSS, JavaScript,
 WebGPU, media, networking, sandboxing and a relentless security treadmill. Attempting it would

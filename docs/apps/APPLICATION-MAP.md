@@ -16,9 +16,13 @@ framework, accessibility primitives, localisation, packaging, CI and test infras
 ## Rules that apply to every row
 
 1. **Replaceable.** Every first-party app is the default, never the only option.
-2. **No private API.** A first-party app holds no capability a third party performing the same
-   function could not obtain (Constitution §7). If Files can do something a third-party file
-   manager cannot, that is a bug.
+2. **No private API.** For ordinary application capabilities, parity holds: an equivalent
+   third-party application can request equivalent capabilities (Constitution §7). If Files can do
+   something a third-party file manager cannot, that is a bug. The narrow exception is the
+   enumerated **privileged system roles** — Recovery, Shield containment, update authority,
+   package authority, firmware management, login/session infrastructure — which are role-based,
+   explicit and auditable, and are **never** granted merely for being first-party
+   ([`NATIVE-APPLICATION-MODEL.md`](NATIVE-APPLICATION-MODEL.md)).
 3. **Offline-first.** Core function works with no network and no account.
 4. **Quality contract.** Fast launch · low idle memory · offline · keyboard-first · accessible
    · no ads · no mandatory account · clean uninstall · no unnecessary background service.
@@ -28,13 +32,13 @@ framework, accessibility primitives, localisation, packaging, CI and test infras
 
 ## System
 
-| App | Purpose / why it exists | v1? | Key dependencies | Privileges | Offline | Build vs reuse |
+| App | Purpose / why it exists | Milestone | Key dependencies | Privileges | Offline | Build vs reuse |
 |---|---|---|---|---|---|---|
-| **Files** | File management. **The benchmark for platform quality** — if Files is slow, the platform is slow | **v1** | VFS, UI, thumbnailers, search | Storage caps + picker role | Full | Custom; reused format parsers, sandboxed |
-| **Settings** | System configuration and the **capability review surface** | **v1** | Settings service, UI, all subsystems | Settings + policy caps | Full | Custom |
-| **Search** | Local index across files, apps, settings | **v1** | Index service, VFS | Storage caps, scoped | Full | Custom; reused text extractors |
-| **Terminal** | Shell access; essential for a developer OS | **v1** | PTY-equivalent, shell, text | Process creation caps | Full | Custom |
-| **Monitor** | Processes, resources, **capability grants**, network flows | **v1** | Tracing, component mgr | Read-only introspection | Full | Custom |
+| **Files** | File management. **The benchmark for platform quality** — if Files is slow, the platform is slow | **M7** | VFS, UI, thumbnailers, search | Storage caps + picker role | Full | Custom; reused format parsers, sandboxed |
+| **Settings** | System configuration and the **capability review surface** | **M7** | Settings service, UI, all subsystems | Settings + policy caps | Full | Custom |
+| **Search** | Local index across files, apps, settings | **M7** | Index service, VFS | Storage caps, scoped | Full | Custom; reused text extractors |
+| **Terminal** | Shell access; essential for a developer OS | **M7** | PTY-equivalent, shell, text | Process creation caps | Full | Custom |
+| **Monitor** | Processes, resources, **capability grants**, network flows | **M7** | Tracing, component mgr | Read-only introspection | Full | Custom |
 | **Devices** | Hardware inventory, driver state, firmware | later | Device manager | Device introspection | Full | Custom |
 | **Store** | Optional distribution channel | later | Packages, account | Package install (user-confirmed) | Browse offline; install needs network | Custom |
 | **Shield** | Security posture, detections, containment | M7 baseline | Security event stream, scanners | Security caps | Full | Custom UI; reused scan engines |
@@ -44,7 +48,7 @@ framework, accessibility primitives, localisation, packaging, CI and test infras
 
 ## Communication
 
-| App | Purpose | v1? | Dependencies | Privileges | Offline | Build vs reuse |
+| App | Purpose | Milestone | Dependencies | Privileges | Offline | Build vs reuse |
 |---|---|---|---|---|---|---|
 | **Browser** | Web access with Malrynth privacy and capability integration | post-M7 | **Reused engine**, GPU, net, Vault | Ordinary app; web permissions map to platform capabilities | Cached only | **Custom UI over a reused engine** ([`BROWSER-STRATEGY.md`](browser/BROWSER-STRATEGY.md)) |
 | **Mail** | Email client | post-M7 | Net, storage, contacts | Network + storage caps | Read cached | Custom; reused MIME/crypto |
@@ -55,7 +59,7 @@ framework, accessibility primitives, localisation, packaging, CI and test infras
 
 ## Media
 
-| App | Purpose | v1? | Dependencies | Privileges | Offline | Build vs reuse |
+| App | Purpose | Milestone | Dependencies | Privileges | Offline | Build vs reuse |
 |---|---|---|---|---|---|---|
 | **Photos** | Library, viewing, light editing | post-M7 | Media framework, GPU, index | Storage caps | Full | Custom; **reused codecs** |
 | **Video** | Playback | post-M7 | Video pipeline, GPU | Storage caps | Full | Custom; reused codecs |
@@ -68,7 +72,7 @@ framework, accessibility primitives, localisation, packaging, CI and test infras
 
 ## Productivity
 
-| App | Purpose | v1? | Dependencies | Privileges | Offline | Build vs reuse |
+| App | Purpose | Milestone | Dependencies | Privileges | Offline | Build vs reuse |
 |---|---|---|---|---|---|---|
 | **Notes** | Quick notes | post-M7 | Storage, sync, text | Storage caps | Full | Custom |
 | **PDF** | Viewing and annotation | post-M7 | Reused engine, text, print | Storage caps | Full | **Custom UI over a reused engine** |
@@ -82,7 +86,7 @@ needs ([`OFFICE-STRATEGY.md`](productivity/OFFICE-STRATEGY.md)).
 
 ## Developer
 
-| App | Purpose | v1? | Dependencies | Privileges | Offline | Build vs reuse |
+| App | Purpose | Milestone | Dependencies | Privileges | Offline | Build vs reuse |
 |---|---|---|---|---|---|---|
 | **SDK/DDK tooling** | `malrynth` CLI, packaging, signing | **M7** | Toolchain, packages | Developer caps | Full | Custom over reused LLVM/rustc |
 | **Studio** | IDE — **explicitly optional** | post-M7 | UI, toolchain, debugger | Ordinary app | Full | Custom or reused editor core |
@@ -93,18 +97,22 @@ needs ([`OFFICE-STRATEGY.md`](productivity/OFFICE-STRATEGY.md)).
 **Malrynth Studio must be optional.** A developer using VS Code, JetBrains, Vim, Emacs or plain
 CLI tooling is fully supported ([`SDK-ARCHITECTURE.md`](../sdk/SDK-ARCHITECTURE.md)).
 
-## v1 (M7) application set
+## M7 Developer OS application set
 
-Only these are required for the Developer OS milestone:
+Only these are required for the **M7 Developer OS** milestone:
 
 ```
 Files · Settings · Search · Terminal · Monitor · package installer
 Shield baseline · Recovery · SDK/DDK tooling
 ```
 
-Everything else is post-M7. **v1 must not ship mediocre applications merely to fill every
-checkbox** — a rule taken directly from the founder vision and worth restating, because the
-pressure to fill the grid is constant.
+Everything else is post-M7. **The M7 Developer OS application set must not ship mediocre
+applications merely to fill every checkbox** — a rule taken directly from the founder vision and
+worth restating, because the pressure to fill the grid is constant.
+
+M7 is the **Developer OS** gate, not a product-quality gate. **Malrynth Desktop 1.0 is a later,
+separate gate** requiring hardware certification and a mature application ecosystem
+([`MASTER-ROADMAP.md`](../roadmap/MASTER-ROADMAP.md)). Nothing here should be described as "v1".
 
 ## Likely first split candidates
 

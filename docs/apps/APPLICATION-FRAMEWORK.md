@@ -36,13 +36,15 @@ into Android-style permission fatigue.
 
 ## Application classes
 
-The framework serves all classes from [`NATIVE-APPLICATION-MODEL.md`](NATIVE-APPLICATION-MODEL.md);
-they differ in manifest and defaults, not in privilege:
+The framework serves all classes from [`NATIVE-APPLICATION-MODEL.md`](NATIVE-APPLICATION-MODEL.md).
+Ordinary classes differ in manifest and defaults, not in privilege; only an enumerated
+**privileged system role** carries authority an ordinary application cannot request:
 
 | Class | Framework surface |
 |---|---|
 | Ordinary app | Full |
 | System app | Full; larger manifest, **no private API** |
+| System role holder | Full; plus the narrow authority of the role it holds, and nothing beyond it |
 | Privileged service | Headless subset: lifecycle, IPC, logging |
 | Background service | Headless + budget awareness |
 | Driver | Driver framework instead ([`DDK-ARCHITECTURE.md`](../sdk/DDK-ARCHITECTURE.md)) |

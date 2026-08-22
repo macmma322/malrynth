@@ -58,10 +58,41 @@ Different classes get different *default* authority. None gets ambient authority
 | **Driver** | NVMe, xHCI | Device capabilities only ([`DRIVER-MODEL.md`](../architecture/DRIVER-MODEL.md)) |
 | **CLI tool** | shell utilities | Inherits the shell's *explicitly passed* capabilities |
 | **Compatibility process** | Linux/Windows app under a personality | Capabilities held by the personality layer on its behalf |
+| **System role holder** | Recovery, Shield containment, updater, package service, firmware service, login/session | Holds one of the enumerated **privileged system roles** below — narrow, explicit and auditable |
 
-**A first-party app is an ordinary app with a bigger manifest, not a privileged one.** If
-Files can do something a third-party file manager cannot, that is a bug against the
-constitution.
+**Being first-party is not a privilege.** For *ordinary* applications the rule is parity: an
+equivalent third-party application can request equivalent ordinary capabilities. If Files can do
+something a third-party file manager cannot, that is a bug against the constitution.
+
+### Privileged system roles
+
+Parity is a rule about *ordinary* capabilities. A small, **enumerated** set of system roles
+carries authority that is deliberately unavailable to arbitrary applications, because the role is
+part of the system's trust base rather than part of its application surface:
+
+| Role | Why it cannot be an ordinary capability |
+|---|---|
+| **Recovery** | Must act when the running system is untrusted, including on protected snapshots |
+| **Shield containment** | Freezes processes and revokes their authority; an ordinary app holding it could disable security |
+| **Update authority** | Determines what system code becomes the next boot |
+| **Package authority** | Determines what installs, and which signatures are accepted |
+| **Firmware management** | Writes persistent pre-OS state |
+| **Login / session infrastructure** | Owns credential entry and the session's root of trust |
+
+Four rules keep this a distinction rather than a loophole:
+
+1. **Role-based, never identity-based.** Authority attaches to the *role*, not to who wrote the
+   application. A third-party implementation appointed to a role receives exactly the same
+   authority; a first-party application not holding the role receives none.
+2. **Explicit and narrow.** Each role is a named, enumerated capability set. Nothing is ever
+   "trusted" as a general property.
+3. **Auditable.** Exercise of role authority is observable through `SecurityEventStream`, and the
+   current set of role holders is visible to the user.
+4. **Not a bypass.** A role confers its own authority and nothing else. It never grants ambient
+   authority and never widens the ordinary capability surface.
+
+**Being first-party is not itself a role, and a role is not a reward for being first-party.**
+Conflating the two is precisely how "system app" becomes a privilege ladder on other platforms.
 
 ## Lifecycle
 

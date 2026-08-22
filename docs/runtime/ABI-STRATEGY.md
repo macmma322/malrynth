@@ -34,6 +34,13 @@ wrapper rather than paid by every caller.
 **Rust-to-Rust internal boundaries may use Rust types**, because they are recompiled together.
 The C ABI is required only where a binary boundary must survive a compiler upgrade.
 
+**The ABI is compiler-independent.** It is defined by the platform — the SysV AMD64 C ABI plus
+Malrynth's own protocol and object definitions — never by a particular compiler's output. Which
+compilers Malrynth chooses to support is a question of toolchain, codegen, testing and support
+burden ([`TOOLCHAIN-ARCHITECTURE.md`](../toolchain/TOOLCHAIN-ARCHITECTURE.md)); it is **not** an ABI
+question. Adding or declining a second compiler does not create, fork or widen a Malrynth ABI. A
+conforming compiler is one that emits the platform ABI correctly; nothing else is required of it.
+
 ## Versioning philosophy
 
 - **Additive by default.** New functions and new protocol messages; never silent semantic changes.
@@ -55,3 +62,4 @@ The C ABI is required only where a binary boundary must survive a compiler upgra
 | A single monolithic "system library" | Everything becomes one version, so nothing can move |
 | Version numbers assigned before M3 | Stability implied where none exists |
 | Compatibility layers with private kernel interfaces | Two security models, one kernel |
+| Treating "which compilers do we support?" as an ABI question | Toolchain burden mistaken for a compatibility commitment, or a second ABI created by accident |

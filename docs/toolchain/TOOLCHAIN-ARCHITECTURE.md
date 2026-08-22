@@ -51,7 +51,7 @@ Vim, Emacs and plain CLI workflows are fully supported.
 | **LLDB** | Reuse | Client/server gdb-remote architecture is a natural early integration path |
 | **LLVM libc** | **Candidate**, unresolved | Full build is static-only with no dynamic loader; many functions missing (verified 2026) |
 | **musl** | **Candidate**, unresolved | Complete and permissive, but deeply Linux-syscall-shaped |
-| **GCC** | Not a target | Supporting a second compiler doubles ABI surface for no gain |
+| **GCC** | Not a target | **Not an ABI decision.** Malrynth's binary contract is the platform-defined C ABI, which is compiler-independent ([`ABI-STRATEGY.md`](../runtime/ABI-STRATEGY.md)) — a second compiler would not create a second ABI. It would add compiler, codegen, testing and support burden for no capability Clang lacks |
 | **binutils** | Not required | LLVM equivalents suffice |
 | **CMake / Meson / Ninja** | Reuse, SDK support | Third-party C/C++ expects them; not used to build Malrynth itself |
 

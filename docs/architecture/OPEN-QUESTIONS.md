@@ -24,7 +24,9 @@ model, and none is an obvious fit.
 **Evidence required:** a spike porting musl's bottom layer to the M3 syscall surface;
 measurement of how much of libc the POSIX facade actually needs; current LLVM-libc dynamic
 loader status at decision time.
-**Blocks:** POSIX, Rust `std`, SDK, every application, Wine.
+**Blocks:** POSIX, Rust `std`, the C/C++ SDK surface, ported software, Wine.
+**Does not block:** native `libmalrynth` userspace, or Rust `no_std` + `alloc` applications — see
+the runtime chain in [`DEPENDENCY-GRAPH.md`](DEPENDENCY-GRAPH.md).
 
 ## Q2 — Is POSIX the native personality, or a facade?
 

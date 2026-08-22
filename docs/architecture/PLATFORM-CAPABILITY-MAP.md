@@ -242,7 +242,10 @@ anything at L4 is explicitly outside it.
 
 ## First-party applications
 
-All L8, all unprivileged, all **replaceable**, all `C` unless noted. Per-app detail — purpose,
+All L8, all **replaceable**, all `C` unless noted. Unprivileged, except where an application holds
+one of the enumerated **privileged system roles** — in this table, Shield containment and Recovery
+— which are role-based, narrow and auditable, and are never conferred by being first-party
+([`NATIVE-APPLICATION-MODEL.md`](../apps/NATIVE-APPLICATION-MODEL.md)). Per-app detail — purpose,
 priority, privileges, offline behaviour, replaceability, build-vs-reuse — is in
 [`APPLICATION-MAP.md`](../apps/APPLICATION-MAP.md).
 

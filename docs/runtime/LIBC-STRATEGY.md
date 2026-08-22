@@ -5,8 +5,15 @@ highest-leverage open decision in the project.
 
 ## Why it dominates
 
-libc gates POSIX, Rust `std`, the SDK, every application, and all of Wine/Proton. Choosing
-wrongly is not a local mistake: it propagates into every layer above the runtime.
+libc gates POSIX, Rust `std`, the C/C++ SDK surface, every **ported** application, and all of
+Wine/Proton. Choosing wrongly is not a local mistake: it propagates into every layer above the
+runtime.
+
+**What it does not gate.** libc is **not** the root prerequisite for native Malrynth userspace.
+`libmalrynth` is the platform boundary and libc sits on top of it (see "Non-negotiable
+constraints" below), so a native application written in Rust against `no_std` + `alloc` is
+possible before this question is answered. What is at stake is **ecosystem reach** — how much
+existing software can be carried, and how soon — not whether userspace can exist at all.
 
 It is also genuinely hard, because Malrynth's authority model is not Unix's. `open("/etc/passwd")`
 presumes ambient authority over a global namespace; Malrynth grants none. Whatever libc is
