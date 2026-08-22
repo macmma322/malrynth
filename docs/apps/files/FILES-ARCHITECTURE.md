@@ -59,6 +59,15 @@ report honest progress.
 
 ## Capabilities
 
-Files is a system application, and — per Constitution §7 — holds **no capability a third-party
-file manager could not obtain**. It receives storage capabilities and the picker role; that is
-all. If a competing file manager cannot be written, the platform has failed its own rule.
+Files is a system application, and — per Constitution §7 — holds **no ordinary capability a
+third-party file manager could not obtain**. It receives storage capabilities and the picker
+role; that is all. If a competing file manager cannot be written, the platform has failed its own
+rule.
+
+**The picker role is a narrow platform role, not a privileged system role.** Providing the system
+file picker means brokering a user's decision into a capability: the act of choosing *is* the
+grant ([`APPLICATION-CAPABILITY-MODEL.md`](../APPLICATION-CAPABILITY-MODEL.md)). The picker
+returns a handle to exactly what the user selected and acquires no ambient filesystem authority
+of its own. That is what separates it from the high-authority roles in
+[`NATIVE-APPLICATION-MODEL.md`](../NATIVE-APPLICATION-MODEL.md), and why it is deliberately not
+one of them.

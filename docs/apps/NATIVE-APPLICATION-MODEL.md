@@ -52,7 +52,7 @@ Different classes get different *default* authority. None gets ambient authority
 | Class | Examples | Defaults |
 |---|---|---|
 | **Ordinary application** | Notes, Photos, third-party apps | Minimal; everything by grant |
-| **System application** | Files, Settings, Monitor | More manifest-declared capabilities — **and no private API a third party could not obtain** (Constitution §7) |
+| **System application** | Files, Settings, Monitor | More manifest-declared capabilities — **and no private API: no *ordinary* capability a third party could not obtain** (Constitution §7) |
 | **Privileged service** | Component Manager, device manager | Broad capabilities; still ring 3, still unprivileged |
 | **Background service** | indexer, sync agent | No UI; budgeted; suspendable |
 | **Driver** | NVMe, xHCI | Device capabilities only ([`DRIVER-MODEL.md`](../architecture/DRIVER-MODEL.md)) |
@@ -90,6 +90,12 @@ Four rules keep this a distinction rather than a loophole:
    current set of role holders is visible to the user.
 4. **Not a bypass.** A role confers its own authority and nothing else. It never grants ambient
    authority and never widens the ordinary capability surface.
+
+**Not every "role" is a privileged system role.** Narrow platform roles — providing the system
+file picker, for instance — broker a user's decision into a capability and acquire no authority
+of their own: the act of choosing *is* the grant
+([`APPLICATION-CAPABILITY-MODEL.md`](APPLICATION-CAPABILITY-MODEL.md)). They are user-mediated,
+replaceable, and deliberately outside the table above.
 
 **Being first-party is not itself a role, and a role is not a reward for being first-party.**
 Conflating the two is precisely how "system app" becomes a privilege ladder on other platforms.

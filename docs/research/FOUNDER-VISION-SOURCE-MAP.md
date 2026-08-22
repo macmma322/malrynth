@@ -45,7 +45,7 @@ and attacked earns that. Currently LOCKED items are almost entirely M0 artifacts
 | Transactional / rollbackable updates | B, R | **ACCEPTED** | `UPDATE-MODEL.md` | packages, storage, recovery | M5 | rollback vs anti-rollback tension |
 | Offline-first; account optional | B, R | **ACCEPTED** | Constitution I, `ACCOUNT-ARCHITECTURE.md` | cloud, apps, products | M5+ | — |
 | Sideloading and third-party stores legitimate | B, R | **ACCEPTED** | Constitution §5–6, `STORE-ARCHITECTURE.md` | packages, Store, policy | M7 | signing root vs sideload UX |
-| First-party apps replaceable, not privileged | B, R | **ACCEPTED** | Constitution §7, `APPLICATION-FRAMEWORK.md` | apps, capabilities | M7 | verification mechanism |
+| First-party apps replaceable; ordinary-application parity | B, R | **ACCEPTED** | Constitution §7, [ADR-0005](../adr/ADR-0005-ordinary-application-parity.md), `APPLICATION-FRAMEWORK.md` | apps, capabilities | M7 | verification mechanism; privileged roles verified separately |
 | Compatibility above/beside, never underneath | B, R | **LOCKED** | `COMPATIBILITY-ARCHITECTURE.md` | compat, kernel | M7+ | — |
 | One core, four products (no four kernels) | B, R | **ACCEPTED** | `PRODUCT-COMPOSITION.md` | everything | M7+ | variant boundary |
 | Advertising profiles are not part of the OS | B, R | **ACCEPTED** | Constitution §13 | privacy, cloud | always | — |
