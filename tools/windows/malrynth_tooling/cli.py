@@ -11,9 +11,33 @@ from pathlib import Path
 from .build import build_image
 from .config import MalrynthConfig, TARGET_KERNEL, TARGET_LOADER
 from .doctor import run_doctor
+from .pe_diff import diff_pe
+from .pe_inspect import format_pe_report, inspect_pe
 from .runner import run_qemu_boot
 from .util import format_fail, format_info, format_ok, format_warn
 from .verify import validate_kernel_elf, validate_loader_pe
+
+
+def cmd_pe_inspect(args: argparse.Namespace) -> int:
+    cfg = MalrynthConfig()
+    target_path = Path(args.file).resolve() if args.file else (cfg.esp_dir / "EFI" / "BOOT" / "BOOTX64.EFI")
+    try:
+        pe = inspect_pe(target_path)
+        print(format_pe_report(pe))
+        return 0
+    except Exception as e:
+        print(format_fail(f"PE inspection failed: {e}"), file=sys.stderr)
+        return 1
+
+
+def cmd_pe_diff(args: argparse.Namespace) -> int:
+    try:
+        report = diff_pe(args.file_a, args.file_b)
+        print(report.format_report())
+        return 0 if report.is_identical else 1
+    except Exception as e:
+        print(format_fail(f"PE diff failed: {e}"), file=sys.stderr)
+        return 1
 
 
 def cmd_doctor(args: argparse.Namespace) -> int:
@@ -169,6 +193,17 @@ def main(argv: list[str] | None = None) -> int:
     # verify
     p_verify = subparsers.add_parser("verify", help="Validate binary artifacts in esp/")
     p_verify.set_defaults(func=cmd_verify)
+
+    # pe-inspect
+    p_pe_inspect = subparsers.add_parser("pe-inspect", help="Inspect structural PE/COFF header of a binary")
+    p_pe_inspect.add_argument("file", nargs="?", default=None, help="Path to PE/EFI binary (default: esp/EFI/BOOT/BOOTX64.EFI)")
+    p_pe_inspect.set_defaults(func=cmd_pe_inspect)
+
+    # pe-diff
+    p_pe_diff = subparsers.add_parser("pe-diff", help="Structurally compare two PE/COFF binaries")
+    p_pe_diff.add_argument("file_a", help="First PE/EFI binary path")
+    p_pe_diff.add_argument("file_b", help="Second PE/EFI binary path")
+    p_pe_diff.set_defaults(func=cmd_pe_diff)
 
     # test
     p_test = subparsers.add_parser("test", help="Run formatting, lints, unit tests, and build")

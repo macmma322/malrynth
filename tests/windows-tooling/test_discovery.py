@@ -42,6 +42,11 @@ class TestDiscovery(unittest.TestCase):
         host = get_host_info()
         self.assertIn("os", host)
         self.assertIn("architecture", host)
+        if sys.platform == "win32":
+            win_ver = sys.getwindowsversion()
+            if win_ver.major == 10 and win_ver.build >= 22000:
+                self.assertIn("Windows 11", host["os"])
+                self.assertIn("NT 10.0", host["kernel"])
 
         root = find_repo_root()
         fs = get_filesystem_info(root)

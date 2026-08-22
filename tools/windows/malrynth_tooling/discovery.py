@@ -21,19 +21,50 @@ def get_host_info() -> dict[str, str]:
     arch = platform.machine()
     cpus = str(os.cpu_count() or "?")
 
-    # On Windows, try to get pretty caption from Win32 or platform
     pretty_os = f"{os_name} {os_release} (Build {os_version})"
+    kernel_str = f"{os_name} {os_version}"
+
     if sys.platform == "win32":
         try:
-            # Query Windows version details
             win_ver = sys.getwindowsversion()
-            pretty_os = f"Windows {win_ver.major}.{win_ver.minor} (Build {win_ver.build})"
+            major = win_ver.major
+            minor = win_ver.minor
+            build = win_ver.build
+            kernel_str = f"NT {major}.{minor}.{build}"
+
+            edition = ""
+            display_ver = ""
+            try:
+                import winreg
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion")
+                try:
+                    display_ver, _ = winreg.QueryValueEx(key, "DisplayVersion")
+                except Exception:
+                    pass
+                try:
+                    edition, _ = winreg.QueryValueEx(key, "EditionID")
+                except Exception:
+                    pass
+                finally:
+                    key.Close()
+            except Exception:
+                pass
+
+            edition_str = f" {edition}" if edition else ""
+            ver_str = f" {display_ver}" if display_ver else ""
+
+            if major == 10 and build >= 22000:
+                pretty_os = f"Windows 11{edition_str}{ver_str} (Build {build}, NT {major}.{minor})"
+            elif major == 10:
+                pretty_os = f"Windows 10{edition_str}{ver_str} (Build {build}, NT {major}.{minor})"
+            else:
+                pretty_os = f"Windows {major}.{minor}{edition_str} (Build {build})"
         except Exception:
             pass
 
     return {
         "os": pretty_os,
-        "kernel": f"{os_name} {os_version}",
+        "kernel": kernel_str,
         "architecture": arch,
         "cpus": cpus,
     }
