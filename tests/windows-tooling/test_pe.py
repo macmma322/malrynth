@@ -106,7 +106,7 @@ class TestPeInspectionAndDiff(unittest.TestCase):
             self.assertIn("TimeDateStamp", report.format_report())
 
     def test_python_ast_syntax_compatibility(self) -> None:
-        """Verify all codebase Python files are syntactically valid in Python 3.8+."""
+        """Verify all codebase Python files parse on the active supported interpreter."""
         root = self.cfg.root
         py_files = list(root.glob("tools/windows/**/*.py")) + list(root.glob("tests/windows-tooling/**/*.py"))
         for pf in py_files:
