@@ -72,6 +72,40 @@ compatible with every licensing option still open to Malrynth
 
 Exact resolved versions are pinned in the committed `Cargo.lock`.
 
+## Anticipated reuse (H0.5) — NOT YET IMPORTED
+
+Recorded because [`BUILD-VS-REUSE-MATRIX.md`](docs/architecture/BUILD-VS-REUSE-MATRIX.md) makes
+reuse recommendations that carry legal consequences. **None of the following is present in the
+repository, and no code has been copied.** Each requires a full ledger entry and licence review
+*before* import.
+
+| Anticipated component | Expected licence family | Use | Legal review required |
+|---|---|---|---|
+| libc (musl or LLVM libc) | MIT / Apache-2.0 w/ LLVM exception | Ported into the runtime | Attribution; modification disclosure |
+| Cryptographic primitives | Permissive (varies) | Linked into privileged services | Export/crypto considerations |
+| TLS / QUIC implementations | Permissive (varies) | Network stack | — |
+| Text shaping (HarfBuzz-class) | MIT | Text engine | Attribution |
+| Font rasterisation (FreeType-class) | FTL or GPL dual | Text engine | **Licence choice matters** |
+| Unicode / CLDR data | Unicode licence | Text, locale | Attribution |
+| Media codecs | Varies | Media framework | **PATENT REVIEW REQUIRED** — obligations are independent of source licence ([Q10](docs/architecture/OPEN-QUESTIONS.md)) |
+| Mesa-derived GPU driver | MIT-ish | Ported GPU driver | Attribution; modification tracking |
+| Vulkan loader | Apache-2.0 | Graphics | — |
+| Browser engine (Chromium / WebKit) | BSD / LGPL | Browser | **Significant review**; LGPL implications |
+| Office/PDF format engines | Varies | Productivity | Review per engine |
+| Wine | LGPL | Windows compatibility | **Separate process** — must remain non-derivative |
+| DXVK / vkd3d-proton | zlib / LGPL | D3D translation | Same |
+| Linux guest kernel | GPL-2.0 | Compatibility VM guest | **Guest only** — never beneath Malrynth; must remain non-derivative |
+| virtio specification | Spec | Paravirtual devices | — |
+
+**Unresolved legal review**, tracked in [`LICENSING-STATUS.md`](docs/legal/LICENSING-STATUS.md):
+
+1. **Codec patents** — the single largest legal risk to shipping media applications.
+2. **LGPL boundaries** for Wine, vkd3d and possibly a browser engine: process separation must
+   be verified, not assumed.
+3. **GPL-2.0 guest isolation** — a Linux VM guest must not create a derivative-work argument.
+4. **Malrynth's own licence** ([Q13](docs/architecture/OPEN-QUESTIONS.md)) constrains which of
+   the above are compatible, so it interacts with every row here.
+
 ## Copied code
 
 **None.** No third-party source has been copied into Malrynth.

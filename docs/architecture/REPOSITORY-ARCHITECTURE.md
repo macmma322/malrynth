@@ -49,7 +49,7 @@ The directory boundary is the future repository boundary, present from the first
 ## What deliberately does not exist
 
 `products/`, `ui/`, `apps/`, `sdk/`, `compat/`, `infra/` — as directories or repositories.
-Each is documented (`PRODUCT-COMPOSITION.md`, `docs/application-map.md`,
+Each is documented (`PRODUCT-COMPOSITION.md`, `docs/apps/APPLICATION-MAP.md`,
 `docs/compatibility/COMPATIBILITY-STRATEGY.md`) so the roadmap is expressed without
 generating scaffolding. Empty directories are not architecture.
 

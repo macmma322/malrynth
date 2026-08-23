@@ -39,9 +39,19 @@ Competing stores get the same technically supported installation path as the fir
 store. *(Aspirational.)*
 
 **7. Competing applications are not intentionally degraded.**
-First-party applications receive no private API, no scheduling advantage, and no capability
-unavailable to a third party performing the same function. First-party apps are replaceable
-by design. *(Aspirational.)*
+Malrynth may not grant private platform advantages merely because software is first-party. An
+ordinary first-party application and an equivalent ordinary third-party application must be able
+to request the same ordinary capabilities under the same policy. First-party applications are
+replaceable by design.
+
+This is **ordinary-application parity, not universal privilege parity.** Privileged system roles
+— recovery, security containment, update authority, package authority, firmware management, and
+login and session infrastructure — may hold capabilities ordinary applications cannot, where the
+privilege is necessary to the role. Such privilege must be role-based, documented, narrowly
+scoped, auditable, and revocable where technically possible; it is never conferred by a binary
+being first-party. Where Malrynth intentionally supports replacing such a role, third-party
+software may occupy it on the same admission and security terms.
+*(Aspirational. Amended by [ADR-0005](../adr/ADR-0005-ordinary-application-parity.md).)*
 
 ## II. Security
 

@@ -94,6 +94,19 @@ cannot say where it panicked costs far more engineering time than the bytes are 
 recorded here rather than absorbed silently, which is the entire point of tracking sizes from
 M0.
 
+**OBSERVED, NOT YET ACCEPTED MEASUREMENT.** This branch enforces the non-PIE kernel invariant
+([ADR-0003 §4](../adr/ADR-0003-toolchain-and-targets.md)) at the link step, and that changes the
+kernel size. A native-Windows build of this branch produces a **130,704-byte** kernel — 16 bytes
+more than the figure above — while a build of the `main`-equivalent tree on the same host
+reproduces the 130,688 kernel figure exactly. The two trees differ only by that link argument, so
+the delta is attributable to it rather than to the host. **The table is deliberately not
+updated.** Figures above are MEASURED under the validated Linux/QEMU environment; a
+native-Windows observation is not that environment, and recording it as MEASURED would be a
+fabricated validation. The H0.5 kernel size is re-measured — and this note removed — when the
+validated suite next runs. Separately, and still unresolved, the loader does **not** reproduce
+its recorded size on that host; cross-host reproducibility remains unproven and is not claimed
+(see [`SUPPLY-CHAIN.md`](../security/SUPPLY-CHAIN.md)).
+
 The gap between the on-disk ELF and the 16 KiB loaded extent is debug information,
 retained deliberately for symbolisation (see ADR-0003) and stripped from distributable
 images later. **Both numbers are tracked** so that a real code-size regression cannot hide

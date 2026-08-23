@@ -102,8 +102,13 @@ criteria for when a component earns its own repository — is in
 | How it is structured | [System Overview](docs/architecture/SYSTEM-OVERVIEW.md) |
 | Why one repository | [ADR-0001](docs/adr/ADR-0001-repository-topology.md) |
 | What is actually secure today | [Threat Model](docs/security/THREAT-MODEL.md) |
-| What happens next | [Roadmap](docs/roadmap/README.md) |
+| What happens next | [Roadmap](docs/roadmap/README.md) · [Master roadmap](docs/roadmap/MASTER-ROADMAP.md) |
 | How M0 works | [M0](docs/roadmap/M0.md) |
+| **How the whole platform fits together** | [Platform layers](docs/architecture/PLATFORM-LAYERS.md) |
+| **Where any component belongs** | [Platform capability map](docs/architecture/PLATFORM-CAPABILITY-MAP.md) |
+| **What must exist before X** | [Dependency graph](docs/architecture/DEPENDENCY-GRAPH.md) |
+| **What we build vs reuse** | [Build vs reuse matrix](docs/architecture/BUILD-VS-REUSE-MATRIX.md) |
+| **What is still undecided** | [Open questions](docs/architecture/OPEN-QUESTIONS.md) |
 
 ## A note on documentation
 
