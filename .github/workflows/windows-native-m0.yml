@@ -1,10 +1,10 @@
 name: Windows native M0
 
-# Experimental consumer CI for feature/windows-native-tooling-spike. This proves the
-# native build path on a clean Windows host; QEMU/OVMF boot remains deliberately out of scope.
+# Build/tooling CI for the hardened native Windows M0 path. QEMU/OVMF boot remains
+# deliberately out of scope and is validated on a configured development host.
 on:
   push:
-    branches: [ci/windows-native-m0]
+    branches: [ci/windows-native-m0-hardened]
   workflow_dispatch:
 
 concurrency:
@@ -39,6 +39,10 @@ jobs:
           Get-ComputerInfo -Property WindowsProductName, WindowsVersion, OsBuildNumber, OsArchitecture
           git --version
           python --version
+          $pythonVersion = python -c "import sys; print('.'.join(map(str, sys.version_info[:3])))"
+          if ([version]$pythonVersion -lt [version]'3.10') {
+            throw "Python >= 3.10 is required; found $pythonVersion"
+          }
           rustup --version
 
       - name: Install pinned Rust toolchain
@@ -85,6 +89,13 @@ jobs:
           $ErrorActionPreference = 'Stop'
           python -m unittest discover -s tests/windows-tooling -p "test_*.py" -v
           if ($LASTEXITCODE -ne 0) { throw "Windows tooling tests failed" }
+
+      - name: Same-host reproducibility
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python -m unittest discover -s tests/windows-tooling -p "test_reproducibility.py" -v
+          if ($LASTEXITCODE -ne 0) { throw "Same-host reproducibility failed" }
 
       - name: Native Windows M0 build
         shell: pwsh

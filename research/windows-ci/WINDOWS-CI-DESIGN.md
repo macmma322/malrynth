@@ -2,18 +2,17 @@
 
 ## Status and scope
 
-This workflow is an experimental CI consumer of `feature/windows-native-tooling-spike`. It does
-not adopt the Windows toolchain into the production build architecture. Its purpose is to test
-the spike independently on a fresh GitHub-hosted Windows machine before later integration is
-considered.
+This workflow validates the hardened native Windows M0 build and tooling path independently on a
+fresh GitHub-hosted Windows machine. It remains build/tooling CI: boot validation stays on a
+configured development host and the Linux reference path remains intact.
 
 The workflow proves that one clean Windows host can:
 
 - select the repository-pinned Rust 1.97.1 toolchain, including `rustfmt`, `clippy`,
   `x86_64-unknown-uefi`, and `x86_64-unknown-none`;
-- use the runner's modern Python 3 runtime and Git installation;
+- require Python 3.10 or newer and use the runner's Git installation;
 - run the complete inherited `tests/windows-tooling` unittest suite, including the explicit
-  path-with-spaces test and Python 3.8 grammar/AST compatibility check;
+  path-with-spaces and reproducibility coverage;
 - build `esp\EFI\BOOT\BOOTX64.EFI` and `esp\malrynth\kernel.elf` without WSL;
 - validate a non-empty PE32+ loader and a non-empty ELF64 `ET_EXEC` kernel using the spike's
   existing verifier; and
@@ -36,10 +35,8 @@ rustup for the components and targets declared by `rust-toolchain.toml`. It does
 machine-local isolated Rust installation. No Cargo cache is used, so this is deliberately clean
 build evidence.
 
-The workflow uses the modern `python` already supplied by the runner. It does not install an
-obsolete Python 3.8 runtime. Python 3.8 compatibility is syntax-level evidence supplied by the
-inherited AST compatibility test; runtime behavior is tested only on the runner's reported modern
-Python version.
+The workflow uses the modern `python` already supplied by the runner and fails before testing if
+it is older than Python 3.10. Runtime behavior is tested on the runner's reported Python version.
 
 ## Test and reproducibility claim
 
@@ -78,7 +75,8 @@ package access, or release publication. Checkout uses the repository's existing 
 official action and disables credential persistence. No artifact upload or cache action is used.
 All repository code runs as untrusted input inside the ephemeral runner with no repository secrets.
 
-Triggers are intentionally limited to manual dispatch and pushes to `ci/windows-native-m0`; the
+Triggers are intentionally limited to manual dispatch and pushes to
+`ci/windows-native-m0-hardened`; the
 experimental workflow does not run on every repository branch or change established `main` CI.
 It does not use `pull_request_target`. If pull-request coverage is added later, ordinary
 `pull_request` with the same read-only and secret-free boundary is required.
