@@ -80,9 +80,9 @@ establishes the ratchet before there is anything to hide.
 
 | Metric | Value | Status |
 |---|---|---|
-| Loader image size | 40,960 bytes | **MEASURED** (release, 2026-08-19) |
-| Kernel image size | 130,688 bytes | **MEASURED** (release, 2026-08-19) |
-| Build reproducibility | byte-identical across build paths | **MEASURED**, enforced by `tools/check-reproducible` |
+| Loader image size | 40,960 bytes | **MEASURED** (Linux, 2026-08-19; native Windows, 2026-08-23) |
+| Kernel image size | 130,688 bytes | **MEASURED** (Linux, 2026-08-19; native Windows, 2026-08-23) |
+| Build reproducibility | byte-identical across build paths on the same host | **MEASURED**, enforced by `tools/check-reproducible` |
 | Kernel loaded extent | 16 KiB | **MEASURED** (three `PT_LOAD` segments) |
 | Kernel image size ceiling | 256 KiB | PROPOSED |
 | Loader image size ceiling | 128 KiB | PROPOSED |
@@ -94,18 +94,16 @@ cannot say where it panicked costs far more engineering time than the bytes are 
 recorded here rather than absorbed silently, which is the entire point of tracking sizes from
 M0.
 
-**OBSERVED, NOT YET ACCEPTED MEASUREMENT.** This branch enforces the non-PIE kernel invariant
-([ADR-0003 §4](../adr/ADR-0003-toolchain-and-targets.md)) at the link step, and that changes the
-kernel size. A native-Windows build of this branch produces a **130,704-byte** kernel — 16 bytes
-more than the figure above — while a build of the `main`-equivalent tree on the same host
-reproduces the 130,688 kernel figure exactly. The two trees differ only by that link argument, so
-the delta is attributable to it rather than to the host. **The table is deliberately not
-updated.** Figures above are MEASURED under the validated Linux/QEMU environment; a
-native-Windows observation is not that environment, and recording it as MEASURED would be a
-fabricated validation. The H0.5 kernel size is re-measured — and this note removed — when the
-validated suite next runs. Separately, and still unresolved, the loader does **not** reproduce
-its recorded size on that host; cross-host reproducibility remains unproven and is not claimed
-(see [`SUPPLY-CHAIN.md`](../security/SUPPLY-CHAIN.md)).
+**Native-Windows H0.5 validation (2026-08-23).** A clean native build with the pinned toolchain
+produced the canonical **130,688-byte** ELF kernel and **40,960-byte** PE32+ loader. The earlier
+130,704-byte kernel observation did not survive validation and is not a release measurement.
+The loader investigation also closed the apparent 512-byte size divergence: source and Rust
+dependency paths were already remapped, but absolute paths remained in PE `.rdata`; after those
+paths were removed, PE file alignment no longer required the extra 512-byte block. This proves
+the divergence mechanism and restores the recorded Windows loader size. The Windows artifacts
+were byte-identical across clean build directories on the same host. It does **not** prove exact
+Linux/Windows byte identity or cross-host reproducibility, which remain unverified and must not
+be claimed (see [`SUPPLY-CHAIN.md`](../security/SUPPLY-CHAIN.md)).
 
 The gap between the on-disk ELF and the 16 KiB loaded extent is debug information,
 retained deliberately for symbolisation (see ADR-0003) and stripped from distributable
