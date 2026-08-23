@@ -16,15 +16,24 @@ from .discovery import (
     get_filesystem_info,
     get_git_info,
     get_host_info,
+    get_qemu_version,
     get_rust_toolchain_info,
 )
 from .util import format_fail, format_info, format_ok, format_warn
+
+MINIMUM_PYTHON = (3, 10)
+REQUIRED_RUST_VERSION = "1.97.1"
+
+
+def python_version_supported(version: tuple[int, ...]) -> bool:
+    return version[:2] >= MINIMUM_PYTHON
 
 
 def run_doctor(repo_root: Path | None = None) -> int:
     """Run all host and environment diagnostics and print report."""
     cfg = MalrynthConfig(repo_root)
-    missing_count = 0
+    build_failures = 0
+    boot_failures = 0
     warning_count = 0
 
     def print_item_ok(label: str, value: str) -> None:
@@ -35,10 +44,14 @@ def run_doctor(repo_root: Path | None = None) -> int:
         warning_count += 1
         print(format_warn(f"{label:<22} {value}"), file=sys.stderr)
 
-    def print_item_fail(label: str, hint: str) -> None:
-        nonlocal missing_count
-        missing_count += 1
-        print(format_fail(f"{label:<22} MISSING -- {hint}"), file=sys.stderr)
+    def print_item_fail(label: str, hint: str, *, boot_only: bool = False, unsupported: bool = False) -> None:
+        nonlocal build_failures, boot_failures
+        if boot_only:
+            boot_failures += 1
+        else:
+            build_failures += 1
+        state = "UNSUPPORTED" if unsupported else "MISSING"
+        print(format_fail(f"{label:<22} {state} -- {hint}"), file=sys.stderr)
 
     # 1. Host
     print(format_info("host"))
@@ -68,14 +81,20 @@ def run_doctor(repo_root: Path | None = None) -> int:
     else:
         print_item_fail("cargo", "https://rustup.rs")
 
-    if rust["rustc_version"]:
-        print_item_ok("rustc", str(rust["rustc_version"]))
+    rustc_version = str(rust["rustc_version"] or "")
+    if rustc_version.startswith(f"rustc {REQUIRED_RUST_VERSION} "):
+        print_item_ok("rustc", rustc_version)
+    elif rustc_version:
+        print_item_fail("rustc", f"requires Rust {REQUIRED_RUST_VERSION}; found {rustc_version}", unsupported=True)
     else:
         print_item_fail("rustc", "https://rustup.rs")
 
     # Python check
     py_ver = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    print_item_ok("python", f"Python {py_ver} ({sys.executable})")
+    if python_version_supported((sys.version_info.major, sys.version_info.minor, sys.version_info.micro)):
+        print_item_ok("python", f"Python {py_ver} ({sys.executable})")
+    else:
+        print_item_fail("python", f"requires Python >= 3.10; found {py_ver}", unsupported=True)
     print()
 
     # 3. Compilation targets
@@ -95,11 +114,16 @@ def run_doctor(repo_root: Path | None = None) -> int:
     print(format_info("virtualisation (required to run M0)"))
     qemu_bin, qemu_desc = find_qemu()
     if qemu_bin:
-        print_item_ok("qemu-system-x86_64", f"{qemu_bin} [{qemu_desc}]")
+        qemu_version, qemu_version_desc = get_qemu_version(qemu_bin)
+        if qemu_version:
+            print_item_ok("qemu-system-x86_64", f"{qemu_bin} [{qemu_desc}; {qemu_version_desc}]")
+        else:
+            print_item_fail("qemu-system-x86_64", f"executable probe failed: {qemu_version_desc}", boot_only=True)
     else:
         print_item_fail(
             "qemu-system-x86_64",
             "winget install SoftwareFreedomConservancy.QEMU, choco install qemu, or set MALRYNTH_QEMU",
+            boot_only=True,
         )
 
     ovmf_code, ovmf_vars, ovmf_desc = find_ovmf()
@@ -107,10 +131,11 @@ def run_doctor(repo_root: Path | None = None) -> int:
         print_item_ok("OVMF code", f"{ovmf_code}")
         print_item_ok("OVMF vars", f"{ovmf_vars} [{ovmf_desc}]")
     else:
-        print_item_fail(
-            "OVMF firmware",
-            "Set MALRYNTH_OVMF_CODE and MALRYNTH_OVMF_VARS, or place firmware in %LOCALAPPDATA%\\Malrynth\\firmware",
+        label = "OVMF firmware"
+        hint = ovmf_desc if "INVALID FIRMWARE PAIR" in ovmf_desc else (
+            "Set MALRYNTH_OVMF_CODE and MALRYNTH_OVMF_VARS, or place firmware in %LOCALAPPDATA%\\Malrynth\\firmware"
         )
+        print_item_fail(label, hint, boot_only=True)
 
     # Windows Hypervisor Platform / WHPX check (equivalent of KVM on Linux)
     if sys.platform == "win32":
@@ -148,14 +173,10 @@ def run_doctor(repo_root: Path | None = None) -> int:
             print_item_ok("git core.eol", eol)
 
     print()
-    if missing_count > 0:
-        print(
-            format_fail(f"{missing_count} required item(s) missing -- Malrynth cannot be built or booted yet"),
-            file=sys.stderr,
-        )
-        return 1
-
-    print(format_ok("all required dependencies present"))
+    build_ready = build_failures == 0
+    boot_ready = build_ready and boot_failures == 0
+    print(format_ok(f"BUILD READY: {'YES' if build_ready else 'NO'}") if build_ready else format_fail("BUILD READY: NO"))
+    print(format_ok(f"BOOT READY: {'YES' if boot_ready else 'NO'}") if boot_ready else format_fail("BOOT READY: NO"))
     if warning_count > 0:
         print(format_info(f"{warning_count} warning(s) noted above"))
-    return 0
+    return 0 if boot_ready else 1

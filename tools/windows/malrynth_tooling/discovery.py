@@ -13,6 +13,43 @@ from pathlib import Path
 from .config import TARGET_KERNEL, TARGET_LOADER
 
 
+def _firmware_architecture(path: Path, *, is_code: bool) -> str | None:
+    """Classify known firmware filenames without guessing from binary contents."""
+    name = path.name.lower()
+    if "secure" in name and is_code:
+        return "secure-x86"
+    if "aarch64" in name or "arm" in name:
+        return "arm"
+    if "x86_64" in name or "i386" in name or name.startswith("ovmf_") or "ovmf-x86_64" in name:
+        return "x86"
+    return None
+
+
+def validate_firmware_pair(code_path: Path, vars_path: Path) -> tuple[bool, str]:
+    """Validate a known-compatible, non-Secure-Boot CODE/VARS pair.
+
+    QEMU deliberately ships one x86 variable-store template as
+    ``edk2-i386-vars.fd`` for both i386 and x86_64 CODE images. Architecture
+    compatibility therefore cannot be inferred by requiring identical filename labels.
+    """
+    code = code_path.resolve()
+    vars_file = vars_path.resolve()
+    if not code.is_file():
+        return False, f"CODE not found: {code}"
+    if not vars_file.is_file():
+        return False, f"VARS not found: {vars_file}"
+
+    code_arch = _firmware_architecture(code, is_code=True)
+    vars_arch = _firmware_architecture(vars_file, is_code=False)
+    if code_arch == "secure-x86":
+        return False, "Secure Boot CODE is not supported by the current M0 contract"
+    if code_arch is None or vars_arch is None:
+        return False, "unrecognized firmware filename family"
+    if code_arch != vars_arch:
+        return False, f"architecture mismatch: CODE={code_arch}, VARS={vars_arch}"
+    return True, f"compatible {code_arch} firmware pair"
+
+
 def get_host_info() -> dict[str, str]:
     """Retrieve host OS, version, architecture, and CPU count."""
     os_name = platform.system()
@@ -262,6 +299,25 @@ def find_qemu(override_path: str | None = None) -> tuple[Path | None, str]:
     return None, "qemu-system-x86_64 not found on PATH or standard locations"
 
 
+def get_qemu_version(qemu_path: Path) -> tuple[str | None, str]:
+    """Probe a discovered QEMU executable using argv-only subprocess construction."""
+    try:
+        result = subprocess.run(
+            [str(qemu_path), "--version"],
+            capture_output=True,
+            text=True,
+            shell=False,
+            check=False,
+            timeout=10.0,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, str(exc)
+    first_line = result.stdout.splitlines()[0].strip() if result.stdout.splitlines() else ""
+    if result.returncode != 0 or not first_line.startswith("QEMU emulator version "):
+        return None, first_line or result.stderr.strip() or f"exit code {result.returncode}"
+    return first_line.removeprefix("QEMU emulator version ").split()[0], first_line
+
+
 def find_ovmf(
     code_override: str | None = None,
     vars_override: str | None = None,
@@ -282,14 +338,20 @@ def find_ovmf(
     if code_env and vars_env:
         c_path = Path(code_env).resolve()
         v_path = Path(vars_env).resolve()
-        if c_path.is_file() and v_path.is_file():
-            return c_path, v_path, "explicit environment override (CODE + VARS)"
+        valid, reason = validate_firmware_pair(c_path, v_path)
+        if valid:
+            return c_path, v_path, f"explicit environment override (CODE + VARS; {reason})"
         missing = []
         if not c_path.is_file():
             missing.append(f"CODE not found: {c_path}")
         if not v_path.is_file():
             missing.append(f"VARS not found: {v_path}")
-        return None, None, f"invalid environment override: {'; '.join(missing)}"
+        if missing:
+            return None, None, f"invalid environment override: {'; '.join(missing)}"
+        return None, None, f"INVALID FIRMWARE PAIR -- {reason}"
+
+    if code_env or vars_env:
+        return None, None, "invalid environment override: both MALRYNTH_OVMF_CODE and MALRYNTH_OVMF_VARS are required"
 
     # Directory override
     dir_env = dir_override or os.environ.get("MALRYNTH_OVMF")
@@ -328,9 +390,15 @@ def find_ovmf(
         ("OVMF_CODE_4M.fd", "OVMF_VARS_4M.fd"),
         ("OVMF_CODE.fd", "OVMF_VARS.fd"),
         ("edk2-x86_64-code.fd", "edk2-i386-vars.fd"),
-        ("edk2-x86_64-code.fd", "edk2-arm-vars.fd"),
         ("ovmf-x86_64-code.bin", "ovmf-x86_64-vars.bin"),
     ]
+
+    known_code_names = [name for name, _ in pair_names] + [
+        "edk2-x86_64-secure-code.fd",
+        "edk2-aarch64-code.fd",
+        "edk2-arm-code.fd",
+    ]
+    known_vars_names = [name for _, name in pair_names] + ["edk2-arm-vars.fd"]
 
     for s_dir in search_dirs:
         if not s_dir.is_dir():
@@ -339,6 +407,20 @@ def find_ovmf(
             c = s_dir / code_name
             v = s_dir / vars_name
             if c.is_file() and v.is_file():
-                return c.resolve(), v.resolve(), f"found in {s_dir}"
+                valid, reason = validate_firmware_pair(c, v)
+                if valid:
+                    return c.resolve(), v.resolve(), f"found in {s_dir}; {reason}"
+
+        available_codes = [s_dir / name for name in known_code_names if (s_dir / name).is_file()]
+        available_vars = [s_dir / name for name in known_vars_names if (s_dir / name).is_file()]
+        if available_codes and available_vars:
+            reasons = []
+            for code in available_codes:
+                for vars_file in available_vars:
+                    valid, reason = validate_firmware_pair(code, vars_file)
+                    if valid:
+                        return code.resolve(), vars_file.resolve(), f"found in {s_dir}; {reason}"
+                    reasons.append(f"{code.name} + {vars_file.name}: {reason}")
+            return None, None, f"INVALID FIRMWARE PAIR -- {'; '.join(reasons)}"
 
     return None, None, "OVMF firmware not found. Set MALRYNTH_OVMF_CODE and MALRYNTH_OVMF_VARS or place firmware in %LOCALAPPDATA%\\Malrynth\\firmware"

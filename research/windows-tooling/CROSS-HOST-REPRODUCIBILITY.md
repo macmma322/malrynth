@@ -150,8 +150,8 @@ Define compiler flags in a single machine-readable manifest or python module (e.
 
 ## 5. Audit of Claims
 
-1. **Claim: "Python 3.8+"**:
-   - **Audit**: All Python code in `tools/windows/` and `tests/windows-tooling/` was AST-analyzed and tested against Python 3.8 standard library and grammar rules.
+1. **Python requirement: >= 3.10**:
+   - **Corrected audit**: The implementation uses PEP 604 union syntax and therefore requires Python 3.10 or newer. The earlier Python 3.8 compatibility claim and current-runtime-only AST test were insufficient evidence.
    - No `match/case` (3.10+), no `.removeprefix()` (3.9+), and all union types use `from __future__ import annotations` (PEP 563, Python 3.7+).
    - **Status**: **VERIFIED**.
 2. **Claim: "strictly POSIX- and Linux-compatible"**:

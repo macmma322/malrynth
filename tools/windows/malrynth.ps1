@@ -25,7 +25,7 @@ if (Get-Command "python" -ErrorAction SilentlyContinue) {
 } elseif (Get-Command "py" -ErrorAction SilentlyContinue) {
     $pythonCmd = "py"
 } else {
-    Write-Error "Python 3 is required to run Malrynth developer tools. Please install Python 3 or add it to PATH."
+    Write-Error "Python >= 3.10 is required to run Malrynth developer tools. Install it or add it to PATH."
     exit 1
 }
 

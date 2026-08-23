@@ -13,6 +13,7 @@ from .config import MalrynthConfig, TARGET_KERNEL, TARGET_LOADER
 from .doctor import run_doctor
 from .pe_diff import diff_pe
 from .pe_inspect import format_pe_report, inspect_pe
+from .panic import check_panic_path
 from .runner import run_qemu_boot
 from .util import format_fail, format_info, format_ok, format_warn
 from .verify import validate_kernel_elf, validate_loader_pe
@@ -78,6 +79,10 @@ def cmd_verify(args: argparse.Namespace) -> int:
         failures += 1
 
     return 0 if failures == 0 else 1
+
+
+def cmd_check_panic_path(args: argparse.Namespace) -> int:
+    return check_panic_path(timeout=args.timeout)
 
 
 def cmd_test(args: argparse.Namespace) -> int:
@@ -154,6 +159,12 @@ def cmd_test(args: argparse.Namespace) -> int:
             else:
                 print(format_fail(f"boot smoke test {i}/{boots}"))
                 failures += 1
+        print(format_info("panic path"))
+        if check_panic_path(cfg.root) == 0:
+            print(format_ok("panic path"))
+        else:
+            print(format_fail("panic path"))
+            failures += 1
     else:
         print(format_warn("boot smoke tests skipped (--skip-boot)"))
 
@@ -193,6 +204,10 @@ def main(argv: list[str] | None = None) -> int:
     # verify
     p_verify = subparsers.add_parser("verify", help="Validate binary artifacts in esp/")
     p_verify.set_defaults(func=cmd_verify)
+
+    p_panic = subparsers.add_parser("check-panic-path", help="Validate deliberate kernel panic diagnostics")
+    p_panic.add_argument("--timeout", type=float, default=60.0, help="Panic boot timeout in seconds")
+    p_panic.set_defaults(func=cmd_check_panic_path)
 
     # pe-inspect
     p_pe_inspect = subparsers.add_parser("pe-inspect", help="Inspect structural PE/COFF header of a binary")
