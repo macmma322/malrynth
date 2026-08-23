@@ -154,20 +154,26 @@ The earlier 130,704-byte kernel observation was not reproduced and is not accept
 130,688-byte value above is recorded as **OBSERVED WINDOWS VALIDATION**, not as a rewritten
 performance baseline.
 
-## Tests and remaining limitations
+## Tests and pre-M1 integration status
 
-The Windows tooling suite expanded from 24 to 43 tests, covering firmware pairing, secure
+At the time of this validation, the Windows tooling suite expanded from its historical 24-test
+baseline to 43 tests, covering firmware pairing, secure
 selection, missing files, environment overrides, marker states, interactive semantics,
 timeouts, process-tree termination, unique/clean run state, VARS immutability, Python gating,
 and panic parser/timeout/missing-diagnostics behavior.
 
-Remaining integration work:
+The hardened build/tooling workflow was subsequently integrated on
+`ci/windows-native-m0-hardened`. GitHub Actions run `32644761307` passed on the
+`windows-2025` runner at commit `e727acf03ea35113d9a94cd28bcdc1242a8199a7`. It intentionally
+does not install or run QEMU; configured-host boot validation remains a separate gate.
 
-- Linux and Windows build flags remain duplicated. The deferred shared-manifest recommendation
-  (`tools/m0-contract.toml`) remains unchanged.
-- `ci/windows-native-m0` is still based on the earlier tooling SHA and requires a later
-  rebase/update to exercise this hardened branch. No workflow was modified here.
+Remaining limitations and debt:
+
+- Linux flags in `tools/lib.sh` and Windows flags in
+  `tools/windows/malrynth_tooling/config.py` remain duplicated. Until a shared manifest replaces
+  both definitions, **every build-flag change must update both files in the same change and must
+  pass Linux and Windows reproducibility validation**. This debt is deferred; it does not justify
+  adding a manifest during the pre-M1 integration gate.
 - Interactive GUI presentation has unit-level marker-state coverage; the accepted native
   boot evidence is from the deterministic headless mode.
-- This branch is experimental and must receive independent Codex/Claude integration review
-  before merge.
+- Cross-host and Linux/Windows exact byte identity remain unproven and are not claimed.
