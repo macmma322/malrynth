@@ -139,6 +139,7 @@ def cmd_test(args: argparse.Namespace) -> int:
 
     # 6. Unit tests
     step("unit tests (abi)", ["cargo", "test", "-p", "malrynth-abi"])
+    step("unit tests (loader memory map)", ["cargo", "test", "-p", "malboot", "--lib"])
 
     # 7. Build
     print(format_info("build"))

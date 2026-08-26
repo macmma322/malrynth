@@ -34,6 +34,7 @@ mod elf;
 
 use alloc::vec::Vec;
 use core::mem::size_of;
+use malboot::{MemoryMapError, RawMemoryRegion, normalise_memory_regions};
 use malrynth_abi::{
     BOOT_ABI_VERSION, BOOT_MAGIC, BootInfo, Framebuffer, KERNEL_PHYS_BASE, KernelEntry, MemoryKind,
     MemoryRegion, PixelFormat,
@@ -167,7 +168,7 @@ fn boot_malrynth() -> Result<core::convert::Infallible, Status> {
     // SAFETY: `regions_ptr` was allocated for MAX_MEMORY_REGIONS entries and zeroed; it
     // lives in LOADER_DATA, which survives ExitBootServices.
     let regions = unsafe { core::slice::from_raw_parts_mut(regions_ptr, MAX_MEMORY_REGIONS) };
-    let (region_count, usable_bytes) = normalise_memory_map(&memory_map, regions, low, high);
+    let (region_count, usable_bytes) = normalise_memory_map(&memory_map, regions, low, high)?;
 
     // ---- 7. Fill the handoff block and enter the kernel ---------------------------
     let info = BootInfo {
@@ -257,55 +258,31 @@ fn normalise_memory_map(
     out: &mut [MemoryRegion],
     kernel_start: u64,
     kernel_end: u64,
-) -> (usize, u64) {
-    let mut count = 0usize;
-    let mut usable_bytes = 0u64;
-
-    for descriptor in memory_map.entries() {
-        if count >= out.len() {
-            break; // Reported by the kernel as a region count at the cap.
-        }
-
+) -> Result<(usize, u64), Status> {
+    let regions = memory_map.entries().map(|descriptor| {
         let start = descriptor.phys_start;
-        let len = descriptor.page_count * 4096;
-
-        // Classify. The kernel image sits inside a LOADER_DATA range we allocated, so it is
-        // reclassified here to stop the kernel's future allocator from handing out the
-        // memory it is executing from.
-        let kind = if start < kernel_end && (start + len) > kernel_start {
-            MemoryKind::KernelImage
-        } else {
-            match descriptor.ty {
-                MemoryType::CONVENTIONAL => MemoryKind::Usable,
-                // Boot-services code/data become free once the firmware is gone, but M0
-                // does not reclaim them: doing so requires knowing that nothing retained a
-                // pointer into them. Reclamation is an M1 decision with a test behind it.
-                MemoryType::BOOT_SERVICES_CODE | MemoryType::BOOT_SERVICES_DATA => {
-                    MemoryKind::Reserved
-                }
-                MemoryType::LOADER_CODE | MemoryType::LOADER_DATA => MemoryKind::BootInfo,
-                MemoryType::RUNTIME_SERVICES_CODE | MemoryType::RUNTIME_SERVICES_DATA => {
-                    MemoryKind::UefiRuntime
-                }
-                MemoryType::ACPI_RECLAIM => MemoryKind::AcpiReclaimable,
-                _ => MemoryKind::Reserved,
+        let kind = match descriptor.ty {
+            MemoryType::CONVENTIONAL => MemoryKind::Usable,
+            MemoryType::BOOT_SERVICES_CODE | MemoryType::BOOT_SERVICES_DATA => MemoryKind::Reserved,
+            MemoryType::LOADER_CODE | MemoryType::LOADER_DATA => MemoryKind::BootInfo,
+            MemoryType::RUNTIME_SERVICES_CODE | MemoryType::RUNTIME_SERVICES_DATA => {
+                MemoryKind::UefiRuntime
             }
+            MemoryType::ACPI_RECLAIM => MemoryKind::AcpiReclaimable,
+            _ => MemoryKind::Reserved,
         };
-
-        if kind == MemoryKind::Usable {
-            usable_bytes += len;
-        }
-
-        out[count] = MemoryRegion {
+        RawMemoryRegion {
             start_phys: start,
-            len,
+            page_count: descriptor.page_count,
             kind,
-            _reserved: 0,
-        };
-        count += 1;
-    }
-
-    (count, usable_bytes)
+        }
+    });
+    normalise_memory_regions(regions, out, kernel_start, kernel_end).map_err(|error| match error {
+        MemoryMapError::TooManyRegions
+        | MemoryMapError::ByteLengthOverflow
+        | MemoryMapError::RegionEndOverflow
+        | MemoryMapError::UsableBytesOverflow => Status::BAD_BUFFER_SIZE,
+    })
 }
 
 /// Queries the Graphics Output Protocol for a linear framebuffer.
