@@ -16,6 +16,8 @@ def build_image(
     repo_root: Path | None = None,
     debug: bool = False,
     panic_test: bool = False,
+    esp_dir: Path | None = None,
+    cargo_target_dir: Path | None = None,
 ) -> int:
     """Build the Malrynth loader and kernel, and assemble the ESP directory."""
     cfg = MalrynthConfig(repo_root)
@@ -26,7 +28,9 @@ def build_image(
     loader_env = os.environ.copy()
     loader_env["CARGO_ENCODED_RUSTFLAGS"] = cfg.loader_encoded_rustflags
     loader_env.pop("RUSTFLAGS", None)
-    loader_env["CARGO_TARGET_DIR"] = str(cfg.cargo_target_dir)
+    target_dir = cargo_target_dir.resolve() if cargo_target_dir else cfg.cargo_target_dir
+    destination_esp = esp_dir.resolve() if esp_dir else cfg.esp_dir
+    loader_env["CARGO_TARGET_DIR"] = str(target_dir)
 
     res = subprocess.run(
         ["cargo", "build", "-p", "malboot", "--target", TARGET_LOADER, *profile_flag],
@@ -45,7 +49,7 @@ def build_image(
     kernel_env = os.environ.copy()
     kernel_env["CARGO_ENCODED_RUSTFLAGS"] = cfg.kernel_encoded_rustflags
     kernel_env.pop("RUSTFLAGS", None)
-    kernel_env["CARGO_TARGET_DIR"] = str(cfg.cargo_target_dir)
+    kernel_env["CARGO_TARGET_DIR"] = str(target_dir)
 
     res = subprocess.run(
         ["cargo", "build", "-p", "malrynth-kernel", "--target", TARGET_KERNEL, *profile_flag, *kernel_features],
@@ -59,10 +63,10 @@ def build_image(
     # Locate generated output binaries
     # Note: On Windows or Linux, malboot produces malboot.efi for UEFI target, and malrynth-kernel for none target.
     # On Windows host, the output might be named malboot.efi and malrynth-kernel (or malrynth-kernel.exe if msvc, but target is x86_64-unknown-none which produces ELF).
-    loader_candidate = cfg.cargo_target_dir / TARGET_LOADER / profile / "malboot.efi"
-    kernel_candidate = cfg.cargo_target_dir / TARGET_KERNEL / profile / "malrynth-kernel"
-    if not kernel_candidate.is_file() and (cfg.cargo_target_dir / TARGET_KERNEL / profile / "malrynth-kernel.exe").is_file():
-        kernel_candidate = cfg.cargo_target_dir / TARGET_KERNEL / profile / "malrynth-kernel.exe"
+    loader_candidate = target_dir / TARGET_LOADER / profile / "malboot.efi"
+    kernel_candidate = target_dir / TARGET_KERNEL / profile / "malrynth-kernel"
+    if not kernel_candidate.is_file() and (target_dir / TARGET_KERNEL / profile / "malrynth-kernel.exe").is_file():
+        kernel_candidate = target_dir / TARGET_KERNEL / profile / "malrynth-kernel.exe"
 
     if not loader_candidate.is_file():
         print(format_fail(f"loader binary not produced at expected location: {loader_candidate}"))
@@ -82,11 +86,11 @@ def build_image(
 
     # Assemble ESP directory
     print(format_info("assembling EFI system partition"))
-    if cfg.esp_dir.exists():
-        shutil.rmtree(cfg.esp_dir)
+    if destination_esp.exists():
+        shutil.rmtree(destination_esp)
 
-    esp_boot_dir = cfg.esp_dir / "EFI" / "BOOT"
-    esp_kernel_dir = cfg.esp_dir / "malrynth"
+    esp_boot_dir = destination_esp / "EFI" / "BOOT"
+    esp_kernel_dir = destination_esp / "malrynth"
     esp_boot_dir.mkdir(parents=True, exist_ok=True)
     esp_kernel_dir.mkdir(parents=True, exist_ok=True)
 
@@ -111,5 +115,5 @@ def build_image(
 
     print(format_ok(f"loader  {loader_size} bytes ({loader_meta['format']})"))
     print(format_ok(f"kernel  {kernel_size} bytes ({kernel_meta['format']} {kernel_meta['type']})"))
-    print(format_ok(f"image   {cfg.esp_dir}"))
+    print(format_ok(f"image   {destination_esp}"))
     return 0

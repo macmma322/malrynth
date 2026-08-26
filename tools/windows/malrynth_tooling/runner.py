@@ -52,9 +52,10 @@ def _terminate_process_tree(proc: subprocess.Popen[bytes]) -> None:
 
 def _classify_output(content: str) -> str | None:
     """Apply the one boot correctness state machine used by every mode."""
-    if BOOT_FAIL_MARKER in content:
+    lines = strip_ansi(content).splitlines()
+    if any(line.strip() == BOOT_FAIL_MARKER for line in lines):
         return "fail-marker"
-    if BOOT_OK_MARKER in content:
+    if any(line.strip() == BOOT_OK_MARKER for line in lines):
         return "ok"
     return None
 
@@ -75,6 +76,7 @@ def run_qemu_boot(
     serial_log_override: Path | None = None,
     temp_root: Path | None = None,
     retain_run_dir: bool = False,
+    esp_dir_override: Path | None = None,
 ) -> BootRunnerResult:
     """Supervise QEMU until an exact marker, process exit, cancellation, or timeout."""
     cfg = MalrynthConfig(repo_root)
@@ -94,8 +96,9 @@ def run_qemu_boot(
 
     try:
         if custom_command is None:
-            loader_path = cfg.esp_dir / "EFI" / "BOOT" / "BOOTX64.EFI"
-            kernel_path = cfg.esp_dir / "malrynth" / "kernel.elf"
+            esp_dir = esp_dir_override.resolve() if esp_dir_override else cfg.esp_dir
+            loader_path = esp_dir / "EFI" / "BOOT" / "BOOTX64.EFI"
+            kernel_path = esp_dir / "malrynth" / "kernel.elf"
             if not loader_path.is_file():
                 print(format_fail("no boot image; run build first"), file=sys.stderr)
                 return missing_result()
@@ -116,7 +119,7 @@ def run_qemu_boot(
                 str(qemu_bin), "-machine", "q35", "-m", "1024", "-cpu", "qemu64",
                 "-drive", f"if=pflash,format=raw,readonly=on,file={ovmf_code}",
                 "-drive", f"if=pflash,format=raw,file={vars_copy}",
-                "-drive", f"format=raw,file=fat:rw:{cfg.esp_dir}",
+                "-drive", f"format=raw,file=fat:rw:{esp_dir}",
                 "-display", "default" if interactive else "none",
                 "-net", "none", "-no-reboot", "-serial", f"file:{serial_log}",
             ]
@@ -134,28 +137,35 @@ def run_qemu_boot(
                 shell=False, creationflags=creationflags,
             )
 
-        result_status = "timeout"
+        terminal_reason = "timeout"
         try:
             while time.monotonic() < deadline:
                 content = serial_log.read_text(encoding="utf-8", errors="replace") if serial_log.is_file() else ""
                 marker_status = _classify_output(content)
                 if marker_status is not None:
-                    result_status = marker_status
+                    terminal_reason = "marker"
                     break
                 if proc.poll() is not None:
-                    time.sleep(0.05)
-                    content = serial_log.read_text(encoding="utf-8", errors="replace") if serial_log.is_file() else ""
-                    result_status = _classify_output(content) or "process-exited"
+                    terminal_reason = "process-exited"
                     break
                 time.sleep(0.1)
         except KeyboardInterrupt:
-            result_status = "cancelled"
+            terminal_reason = "cancelled"
         finally:
             _terminate_process_tree(proc)
 
         duration = time.monotonic() - start_time
         raw_output = serial_log.read_text(encoding="utf-8", errors="replace") if serial_log.is_file() else ""
         cleaned = strip_ansi(raw_output)
+        final_marker = _classify_output(cleaned)
+        if terminal_reason == "cancelled":
+            result_status = "cancelled"
+        elif terminal_reason == "timeout":
+            result_status = "timeout"
+        elif final_marker is not None:
+            result_status = final_marker
+        else:
+            result_status = "process-exited"
         if not quiet:
             print("----- serial output -----")
             for line in cleaned.splitlines():
