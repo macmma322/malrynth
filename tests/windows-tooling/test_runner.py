@@ -16,10 +16,64 @@ _tools_dir = Path(__file__).resolve().parent.parent.parent / "tools" / "windows"
 if str(_tools_dir) not in sys.path:
     sys.path.insert(0, str(_tools_dir))
 
-from malrynth_tooling.runner import _copy_vars_template, run_qemu_boot
+from malrynth_tooling.runner import _classify_output, _copy_vars_template, run_qemu_boot
 
 
 class TestRunner(unittest.TestCase):
+    def test_marker_classification_requires_complete_logical_lines(self) -> None:
+        self.assertEqual(_classify_output("MALRYNTH_M0_BOOT_OK\r\n"), "ok")
+        self.assertEqual(_classify_output("\x1b[32mMALRYNTH_M0_BOOT_OK\x1b[0m\n"), "ok")
+        self.assertIsNone(_classify_output("NOT_MALRYNTH_M0_BOOT_OK_BOGUS\n"))
+        self.assertIsNone(_classify_output("prefix MALRYNTH_M0_BOOT_FAIL suffix\n"))
+
+    def test_late_failure_during_teardown_overrides_observed_success(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="malrynth final classification ") as temp_dir:
+            root = Path(temp_dir)
+            serial_log = root / "serial.log"
+            script = (
+                "import time; from pathlib import Path; "
+                f"Path(r'{serial_log}').write_text('MALRYNTH_M0_BOOT_OK\\n'); time.sleep(60)"
+            )
+
+            def append_failure(proc) -> None:
+                serial_log.write_text(
+                    serial_log.read_text() + "MALRYNTH_M0_BOOT_FAIL\n", encoding="utf-8"
+                )
+                proc.kill()
+                proc.wait()
+
+            with unittest.mock.patch(
+                "malrynth_tooling.runner._terminate_process_tree", side_effect=append_failure
+            ):
+                result = run_qemu_boot(
+                    timeout=5.0,
+                    quiet=True,
+                    custom_command=[sys.executable, "-c", script],
+                    serial_log_override=serial_log,
+                )
+            self.assertEqual(result.status, "fail-marker")
+
+    def test_success_written_only_after_timeout_does_not_pass(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="malrynth timeout boundary ") as temp_dir:
+            root = Path(temp_dir)
+            serial_log = root / "serial.log"
+            script = "import time; time.sleep(60)"
+
+            def append_success(proc) -> None:
+                serial_log.write_text("MALRYNTH_M0_BOOT_OK\n", encoding="utf-8")
+                proc.kill()
+                proc.wait()
+
+            with unittest.mock.patch(
+                "malrynth_tooling.runner._terminate_process_tree", side_effect=append_success
+            ):
+                result = run_qemu_boot(
+                    timeout=0.2,
+                    quiet=True,
+                    custom_command=[sys.executable, "-c", script],
+                    serial_log_override=serial_log,
+                )
+            self.assertEqual(result.status, "timeout")
     def test_mock_success_marker(self) -> None:
         with tempfile.TemporaryDirectory(prefix="malrynth test runner ") as temp_dir:
             temp_path = Path(temp_dir)
