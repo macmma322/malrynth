@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+import hashlib
+import tempfile
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -29,10 +31,13 @@ def evaluate_panic_output(output: str) -> PanicOutputResult:
     checks = {
         "panic reached": re.search(r"^KERNEL PANIC", output, re.MULTILINE) is not None,
         "source location": re.search(r"^  at .*\.rs:\d+:\d+", output, re.MULTILINE) is not None,
-        "panic message": "panic-test: this panic is intentional" in output,
+        "panic message": re.search(
+            r"^\s*panic-test: this panic is intentional\s*$", output, re.MULTILINE
+        )
+        is not None,
         "backtrace header": re.search(r"^backtrace:", output, re.MULTILINE) is not None,
-        "failure marker": BOOT_FAIL_MARKER in output,
-        "success marker absent": BOOT_OK_MARKER not in output,
+        "failure marker": re.search(rf"^{re.escape(BOOT_FAIL_MARKER)}$", output, re.MULTILINE) is not None,
+        "success marker absent": re.search(rf"^{re.escape(BOOT_OK_MARKER)}$", output, re.MULTILINE) is None,
         "multiple frames": frames >= 2,
         "plausible frame chain": "no plausible frame chain" not in output,
     }
@@ -40,16 +45,22 @@ def evaluate_panic_output(output: str) -> PanicOutputResult:
 
 
 def check_panic_path(repo_root: Path | None = None, timeout: float = 60.0) -> int:
-    """Build, boot, validate, symbolize, and then restore the normal M0 image."""
+    """Build, boot, validate, and symbolize one immutable run-scoped panic image."""
     cfg = MalrynthConfig(repo_root)
     result = 1
-    try:
+    with tempfile.TemporaryDirectory(prefix="malrynth-panic-") as temp_dir:
+        run_root = Path(temp_dir)
+        panic_esp = run_root / "esp"
+        panic_target = run_root / "target"
         print(format_info("building deliberate panic-test image"))
-        if build_image(cfg.root, panic_test=True) != 0:
+        if build_image(cfg.root, panic_test=True, esp_dir=panic_esp, cargo_target_dir=panic_target) != 0:
             print(format_fail("panic-test build failed"), file=sys.stderr)
         else:
+            kernel = panic_esp / "malrynth" / "kernel.elf"
+            expected_hash = hashlib.sha256(kernel.read_bytes()).hexdigest()
+            print(format_info(f"boot-bound panic kernel SHA-256 {expected_hash}"))
             print(format_info("booting panic-test image (failure marker expected)"))
-            boot = run_qemu_boot(cfg.root, timeout=timeout, quiet=True)
+            boot = run_qemu_boot(cfg.root, timeout=timeout, quiet=True, esp_dir_override=panic_esp)
             evaluated = evaluate_panic_output(boot.cleaned_output)
             failures = 0
             if boot.status != "fail-marker":
@@ -62,8 +73,13 @@ def check_panic_path(repo_root: Path | None = None, timeout: float = 60.0) -> in
                     print(format_fail(label), file=sys.stderr)
                     failures += 1
 
+            actual_hash = hashlib.sha256(kernel.read_bytes()).hexdigest() if kernel.is_file() else "missing"
+            if actual_hash != expected_hash:
+                print(format_fail("panic kernel changed after identity binding"), file=sys.stderr)
+                failures += 1
+            else:
+                print(format_ok(f"symbolizer-bound kernel SHA-256 {actual_hash}"))
             symbolizer = cfg.root / "tools" / "symbolize"
-            kernel = cfg.esp_dir / "malrynth" / "kernel.elf"
             symbolized = subprocess.run(
                 [sys.executable, str(symbolizer), "--kernel", str(kernel)],
                 input=boot.cleaned_output,
@@ -82,9 +98,4 @@ def check_panic_path(repo_root: Path | None = None, timeout: float = 60.0) -> in
                     print(symbolized.stderr.rstrip(), file=sys.stderr)
                 failures += 1
             result = 0 if failures == 0 else 1
-    finally:
-        print(format_info("restoring normal M0 image"))
-        if build_image(cfg.root) != 0:
-            print(format_fail("failed to restore normal M0 image"), file=sys.stderr)
-            result = 1
     return result
