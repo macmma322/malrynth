@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 # Add tools/windows to sys.path
@@ -42,7 +43,7 @@ class TestRunner(unittest.TestCase):
                 proc.kill()
                 proc.wait()
 
-            with unittest.mock.patch(
+            with patch(
                 "malrynth_tooling.runner._terminate_process_tree", side_effect=append_failure
             ):
                 result = run_qemu_boot(
@@ -64,7 +65,7 @@ class TestRunner(unittest.TestCase):
                 proc.kill()
                 proc.wait()
 
-            with unittest.mock.patch(
+            with patch(
                 "malrynth_tooling.runner._terminate_process_tree", side_effect=append_success
             ):
                 result = run_qemu_boot(
