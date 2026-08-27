@@ -1,10 +1,67 @@
 name: Windows native M0
 
-# Build/tooling CI for the hardened native Windows M0 path. QEMU/OVMF boot remains
-# deliberately out of scope and is validated on a configured development host.
+# Build/tooling CI for the native Windows M0 path. QEMU/OVMF boot remains deliberately
+# out of scope here and is validated on a configured development host: hosted runners
+# have no nested virtualisation, so a hosted boot would measure TCG and prove less than
+# the local boot already does.
+#
+# TRIGGERS
+# --------
+# Windows tooling defines half of the shared M0 compiler/linker contract (see
+# .cargo/config.toml), so a change that reaches main without Windows validation can
+# silently break the native Windows toolchain. main therefore gets both a pull_request
+# and a push trigger.
+#
+# `pull_request` -- never `pull_request_target` -- so a fork's code is never run with
+# access to this repository's context.
+#
+# PATHS
+# -----
+# Documentation-only changes must not consume Windows Actions minutes, which draw from
+# the account's free monthly allowance (see ci.yml). The filter lists everything this
+# job actually depends on. `core/**` deliberately subsumes the boot and ABI trees
+# (core/abi, core/boot) rather than naming them again: an added path under core/ must
+# be covered by default, and a filter that has to be remembered is a filter that will
+# be forgotten.
+#
+# The workflow file itself is listed so a change to this CI definition is validated by
+# the CI it defines.
+#
+# CONSEQUENCE, STATED EXPLICITLY: with path filters, a docs-only PR does not run this
+# workflow at all. If it is ever made a REQUIRED status check, such a PR will block on
+# a check that will never report. Making it required needs a companion always-runs job;
+# that is not added here because the check is not required today.
+#
+# The two path lists below are duplicated verbatim on purpose: GitHub Actions does not
+# support YAML anchors/aliases, so the usual way to share them does not work here. They
+# must be kept identical.
 on:
   push:
-    branches: [ci/windows-native-m0-hardened]
+    branches: [main, ci/windows-native-m0-hardened]
+    paths:
+      - '.github/workflows/windows-native-m0.yml'
+      - '.cargo/**'
+      - 'core/**'
+      - 'tools/windows/**'
+      - 'tools/lib.sh'
+      - 'tools/scan-secrets'
+      - 'tests/windows-tooling/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-native-m0.yml'
+      - '.cargo/**'
+      - 'core/**'
+      - 'tools/windows/**'
+      - 'tools/lib.sh'
+      - 'tools/scan-secrets'
+      - 'tests/windows-tooling/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
   workflow_dispatch:
 
 concurrency:
