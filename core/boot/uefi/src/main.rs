@@ -34,7 +34,9 @@ mod elf;
 
 use alloc::vec::Vec;
 use core::mem::size_of;
-use malboot::{MemoryMapError, RawMemoryRegion, normalise_memory_regions};
+use malboot::{
+    MEMORY_MAP_HEADROOM, MemoryMapError, RawMemoryRegion, memory_map_fits, normalise_memory_regions,
+};
 use malrynth_abi::{
     BOOT_ABI_VERSION, BOOT_MAGIC, BootInfo, Framebuffer, KERNEL_PHYS_BASE, KernelEntry, MemoryKind,
     MemoryRegion, PixelFormat,
@@ -53,9 +55,13 @@ const MAX_LOAD_SEGMENTS: usize = 16;
 
 /// Upper bound on normalised memory regions handed to the kernel.
 ///
-/// QEMU/OVMF typically reports 30–60 descriptors. The array is allocated for this many
-/// before `ExitBootServices` because it cannot be grown afterwards; overflow is reported
-/// rather than silently truncating the kernel's view of physical memory.
+/// QEMU/OVMF reports around a hundred descriptors. The array is allocated for this many
+/// before `ExitBootServices` because it cannot be grown afterwards.
+///
+/// A map that does not fit is **refused, never truncated**: a short region array would tell
+/// the kernel that physical memory it cannot see does not exist, and M1's allocator would
+/// then be free to hand out memory belonging to firmware or to a device. The refusal happens
+/// before `ExitBootServices` (step 4b), which is the last moment it can be reported.
 const MAX_MEMORY_REGIONS: usize = 256;
 
 #[entry]
@@ -154,6 +160,30 @@ fn boot_malrynth() -> Result<core::convert::Infallible, Status> {
 
     let system_table = uefi::table::system_table_raw().map_or(0, |p| p.as_ptr() as u64);
 
+    // ---- 4b. Pre-flight the memory map WHILE THE CONSOLE STILL EXISTS -------------
+    // The handoff array is fixed size, so an oversized firmware map must be refused. It has
+    // to be refused *here*: after ExitBootServices there is no console, so a refusal there
+    // could not be printed, could not emit the failure marker, and would leave the boot to
+    // be diagnosed as an unexplained timeout.
+    //
+    // The count seen now is not the count seen at ExitBootServices -- reading the map
+    // allocates, and freeing that allocation and exiting boot services both perturb the map
+    // again -- so the verdict is taken with headroom. See `malboot::MEMORY_MAP_HEADROOM`.
+    let preflight = boot::memory_map(MemoryType::LOADER_DATA).map_err(|e| {
+        uefi::println!("malboot: cannot read memory map: {:?}", e.status());
+        e.status()
+    })?;
+    let observed = preflight.len();
+    drop(preflight);
+    if let Err(error) = memory_map_fits(observed, MAX_MEMORY_REGIONS, MEMORY_MAP_HEADROOM) {
+        uefi::println!(
+            "malboot: {} -- {observed} descriptors, capacity {MAX_MEMORY_REGIONS}, \
+             {MEMORY_MAP_HEADROOM} reserved for churn",
+            error.describe()
+        );
+        return Err(Status::BUFFER_TOO_SMALL);
+    }
+
     uefi::println!("malboot: exiting boot services");
 
     // ---- 5. Point of no return ----------------------------------------------------
@@ -168,7 +198,19 @@ fn boot_malrynth() -> Result<core::convert::Infallible, Status> {
     // SAFETY: `regions_ptr` was allocated for MAX_MEMORY_REGIONS entries and zeroed; it
     // lives in LOADER_DATA, which survives ExitBootServices.
     let regions = unsafe { core::slice::from_raw_parts_mut(regions_ptr, MAX_MEMORY_REGIONS) };
-    let (region_count, usable_bytes) = normalise_memory_map(&memory_map, regions, low, high)?;
+    let (region_count, usable_bytes) = match normalise_memory_map(&memory_map, regions, low, high) {
+        Ok(normalised) => normalised,
+        // Unreachable in practice: 4b already proved the map fits with MEMORY_MAP_HEADROOM
+        // descriptors to spare, and the arithmetic cases require a firmware map that
+        // describes impossible addresses.
+        //
+        // It is handled rather than propagated because propagating is actively wrong here.
+        // `?` would unwind to `main`, which would `println!` to a console that no longer
+        // exists and then return a Status to firmware that is no longer there. Halting is
+        // the only defined action left. It is deliberately NOT a fall-through into the
+        // kernel: entering with a short region array is the exact failure this refuses.
+        Err(_) => halt_forever(),
+    };
 
     // ---- 7. Fill the handoff block and enter the kernel ---------------------------
     let info = BootInfo {
@@ -253,12 +295,16 @@ const fn pages_for(bytes: u64) -> usize {
 ///
 /// Runs **after** `ExitBootServices`, so it must not allocate, log, or call any service.
 /// Returns the number of regions written and the total usable byte count.
+///
+/// The error is deliberately a `MemoryMapError` rather than a `Status`: a `Status` implies it
+/// can be handed back to firmware, and by the time this runs there is no firmware to hand it
+/// to. The caller has exactly one defined response, and it is not to return.
 fn normalise_memory_map(
     memory_map: &impl MemoryMap,
     out: &mut [MemoryRegion],
     kernel_start: u64,
     kernel_end: u64,
-) -> Result<(usize, u64), Status> {
+) -> Result<(usize, u64), MemoryMapError> {
     let regions = memory_map.entries().map(|descriptor| {
         let start = descriptor.phys_start;
         let kind = match descriptor.ty {
@@ -277,12 +323,22 @@ fn normalise_memory_map(
             kind,
         }
     });
-    normalise_memory_regions(regions, out, kernel_start, kernel_end).map_err(|error| match error {
-        MemoryMapError::TooManyRegions
-        | MemoryMapError::ByteLengthOverflow
-        | MemoryMapError::RegionEndOverflow
-        | MemoryMapError::UsableBytesOverflow => Status::BAD_BUFFER_SIZE,
-    })
+    normalise_memory_regions(regions, out, kernel_start, kernel_end)
+}
+
+/// Stops this CPU permanently.
+///
+/// The only defined response to a failure discovered after `ExitBootServices`: there is no
+/// console to report on and no firmware to return to. Interrupts are masked first so that a
+/// pending interrupt cannot resume execution into a kernel that was never entered.
+fn halt_forever() -> ! {
+    loop {
+        // SAFETY: `cli` and `hlt` are valid at CPL 0, which is where the loader runs, and
+        // neither touches memory. Halting is the intended terminal state.
+        unsafe {
+            core::arch::asm!("cli", "hlt", options(nomem, nostack, preserves_flags));
+        }
+    }
 }
 
 /// Queries the Graphics Output Protocol for a linear framebuffer.

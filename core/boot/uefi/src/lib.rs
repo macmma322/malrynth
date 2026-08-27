@@ -19,6 +19,45 @@ pub enum MemoryMapError {
     UsableBytesOverflow,
 }
 
+impl MemoryMapError {
+    /// A reason string for the loader console. `Debug` is not enough here: this is the last
+    /// thing printed before a refused boot, and it is read by a human.
+    #[must_use]
+    pub const fn describe(&self) -> &'static str {
+        match self {
+            Self::TooManyRegions => "firmware memory map does not fit the handoff array",
+            Self::ByteLengthOverflow => "region page count overflows a byte length",
+            Self::RegionEndOverflow => "region end address overflows 64 bits",
+            Self::UsableBytesOverflow => "total usable bytes overflow 64 bits",
+        }
+    }
+}
+
+/// Descriptors reserved for the churn between the pre-flight snapshot and `ExitBootServices`.
+///
+/// The map must be checked while the UEFI console still exists, because after
+/// `ExitBootServices` the loader cannot report anything. But reading the map allocates, and
+/// freeing that allocation and exiting boot services both perturb the map again, so the
+/// count observed at pre-flight is not the final count. This is the margin that makes the
+/// pre-flight verdict hold at `ExitBootServices` rather than merely at the moment it was
+/// taken. Firmware adds descriptors in ones and twos here; sixteen is generous.
+pub const MEMORY_MAP_HEADROOM: usize = 16;
+
+/// Decides, before `ExitBootServices`, whether the firmware map can still fit afterwards.
+///
+/// Separated from the UEFI glue so the decision is testable on the host: it is the check
+/// that keeps an oversized map from reaching the point where it can no longer be reported.
+pub const fn memory_map_fits(
+    observed: usize,
+    capacity: usize,
+    headroom: usize,
+) -> Result<(), MemoryMapError> {
+    match observed.checked_add(headroom) {
+        Some(required) if required <= capacity => Ok(()),
+        _ => Err(MemoryMapError::TooManyRegions),
+    }
+}
+
 pub fn normalise_memory_regions(
     regions: impl IntoIterator<Item = RawMemoryRegion>,
     out: &mut [MemoryRegion],
@@ -71,6 +110,56 @@ mod tests {
         kind: MemoryKind::Reserved,
         _reserved: 0,
     };
+
+    #[test]
+    fn preflight_accepts_a_map_that_still_fits_with_headroom() {
+        assert_eq!(memory_map_fits(0, 256, 16), Ok(()));
+        assert_eq!(memory_map_fits(239, 256, 16), Ok(()));
+        // Exactly at the limit: 240 + 16 == 256. A map this size is legitimate, not truncated.
+        assert_eq!(memory_map_fits(240, 256, 16), Ok(()));
+    }
+
+    #[test]
+    fn preflight_refuses_a_map_that_would_not_survive_boot_service_churn() {
+        // 241 + 16 == 257. Still fits the array today, but not with room for churn, and the
+        // overflow would then land after ExitBootServices where it cannot be reported.
+        assert_eq!(
+            memory_map_fits(241, 256, 16),
+            Err(MemoryMapError::TooManyRegions)
+        );
+        assert_eq!(
+            memory_map_fits(257, 256, 16),
+            Err(MemoryMapError::TooManyRegions)
+        );
+    }
+
+    #[test]
+    fn preflight_addition_cannot_wrap() {
+        assert_eq!(
+            memory_map_fits(usize::MAX, 256, 16),
+            Err(MemoryMapError::TooManyRegions)
+        );
+        assert_eq!(
+            memory_map_fits(1, usize::MAX, usize::MAX),
+            Err(MemoryMapError::TooManyRegions)
+        );
+    }
+
+    #[test]
+    fn every_error_has_a_distinct_human_reason() {
+        let all = [
+            MemoryMapError::TooManyRegions,
+            MemoryMapError::ByteLengthOverflow,
+            MemoryMapError::RegionEndOverflow,
+            MemoryMapError::UsableBytesOverflow,
+        ];
+        for (i, a) in all.iter().enumerate() {
+            assert!(!a.describe().is_empty());
+            for b in &all[i + 1..] {
+                assert_ne!(a.describe(), b.describe());
+            }
+        }
+    }
 
     #[test]
     fn rejects_input_larger_than_handoff_capacity() {
