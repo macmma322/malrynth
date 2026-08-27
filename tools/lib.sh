@@ -19,7 +19,17 @@ readonly BUILD_DIR="${MALRYNTH_ROOT}/build"
 readonly TARGET_LOADER="x86_64-unknown-uefi"
 readonly TARGET_KERNEL="x86_64-unknown-none"
 
-# --- Compiler flags: single source of truth (see .cargo/config.toml) ----------------
+# --- Compiler flags: the POSIX half of a two-platform contract ----------------------
+#
+# THIS FILE IS NOT THE SINGLE SOURCE OF TRUTH. The same shared M0 compiler/linker
+# contract is defined a second time, for native Windows development, in
+# `tools/windows/malrynth_tooling/config.py` (`kernel_flags_list` / `loader_flags_list`).
+# Neither definition is authoritative over the other.
+#
+# Any change to KERNEL_RUSTFLAGS or LOADER_RUSTFLAGS below MUST be mirrored in that file
+# AND validated on both Linux and Windows before it lands. The non-remap switches must
+# stay byte-identical across the two; `tests/windows-tooling/test_flag_contract.py`
+# fails if they drift. See .cargo/config.toml for the full rationale.
 #
 # Path remapping makes builds reproducible across build directories. Without it the
 # absolute build path is embedded verbatim in debug information, so the same commit built

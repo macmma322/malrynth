@@ -7,11 +7,38 @@
 # -----------------
 # Deliberately empty of `rustflags`. Cargo's `RUSTFLAGS` environment variable REPLACES
 # `target.<triple>.rustflags` rather than merging with it, so flags defined here would be
-# silently dropped the moment `tools/build` sets `RUSTFLAGS` for reproducible builds.
+# silently dropped the moment a build tool sets `RUSTFLAGS` for reproducible builds.
 # Having two mechanisms that silently override each other is exactly the kind of invisible
 # failure this project refuses to ship.
 #
-# The single source of truth is `KERNEL_RUSTFLAGS` / `LOADER_RUSTFLAGS` in tools/lib.sh.
+# THE SHARED M0 COMPILER/LINKER CONTRACT HAS TWO PLATFORM DEFINITIONS
+# -------------------------------------------------------------------
+# There is deliberately no single file that owns `KERNEL_RUSTFLAGS` / `LOADER_RUSTFLAGS`
+# today. The same contract is defined twice, once per supported development platform:
+#
+#   * POSIX / Linux : `KERNEL_RUSTFLAGS` and `LOADER_RUSTFLAGS` in `tools/lib.sh`
+#   * Native Windows: `kernel_flags_list` and `loader_flags_list` in
+#                     `tools/windows/malrynth_tooling/config.py`
+#
+# NEITHER IS THE SOURCE OF TRUTH FOR THE OTHER. Until they are consolidated, any change to
+# the shared contract MUST update BOTH definitions AND pass BOTH Linux and Windows
+# validation. Changing one alone produces two silently divergent toolchains that still
+# build, which is the failure mode this note exists to prevent.
+#
+# What "the shared contract" means precisely: the ordered compiler/linker switches that are
+# NOT path remapping -- currently `-C relocation-model=static -C force-frame-pointers=yes`
+# for the kernel and `-C link-arg=/Brepro -C link-arg=/DEBUG:NONE` for the loader. These
+# must be byte-identical across the two definitions, and
+# `tests/windows-tooling/test_flag_contract.py` fails the build if they drift apart.
+#
+# The `--remap-path-prefix` flags are intentionally NOT identical between the two. They are
+# derived from host paths, and the Windows definition additionally emits forward-slash
+# variants of each prefix because rustc observes a mixture of separator styles on Windows.
+# The remap SET is platform-derived; the contract is what surrounds it.
+#
+# Consolidating the two definitions into one machine-readable file is a real option and is
+# recorded as future work, not done here: it is a build-system change, and this gate is for
+# correctness fixes only.
 #
 # The one property that must hold even under a bare `cargo build` -- that the kernel is a
 # non-PIE ET_EXEC image, because malboot performs no relocation -- is enforced by
