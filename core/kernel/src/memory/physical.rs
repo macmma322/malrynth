@@ -221,9 +221,9 @@ pub fn canonicalize(
     Ok(output_count)
 }
 
-/// Returns metadata frames required for two bits per represented frame.
-pub fn metadata_frames_required(highest_frame: u64) -> Result<u64, MapError> {
-    let bitmap_bytes = highest_frame
+/// Returns metadata frames required for two bits per allocator-controlled RAM frame.
+pub fn metadata_frames_required(managed_frames: u64) -> Result<u64, MapError> {
+    let bitmap_bytes = managed_frames
         .checked_add(3)
         .ok_or(MapError::BitmapCapacity)?
         / 4;
@@ -275,53 +275,66 @@ pub enum FreeError {
 
 /// Deterministic lowest-free bitmap physical-frame allocator.
 pub struct BitmapAllocator<'a> {
+    regions: &'a [CanonicalRegion],
     available: &'a mut [u64],
     allocated: &'a mut [u64],
-    highest_frame: u64,
+    managed_frames: u64,
     accounting: Accounting,
 }
 
 impl<'a> BitmapAllocator<'a> {
     /// Initializes allocator state in caller-provided metadata words.
     pub fn new(
-        regions: &[CanonicalRegion],
+        regions: &'a [CanonicalRegion],
         available: &'a mut [u64],
         allocated: &'a mut [u64],
     ) -> Result<Self, MapError> {
-        let highest_frame = regions
+        let allocatable = regions
             .iter()
             .filter(|region| region.kind == OwnershipKind::Usable)
-            .map(|region| region.frames.end.number())
-            .max()
+            .try_fold(0u64, |total, region| total.checked_add(region.frames.len()))
             .ok_or(MapError::NoUsableMemory)?;
-        let words_u64 = highest_frame.div_ceil(64);
+        if allocatable == 0 {
+            return Err(MapError::NoUsableMemory);
+        }
+        let words_u64 = allocatable.div_ceil(64);
         let words = usize::try_from(words_u64).map_err(|_| MapError::BitmapCapacity)?;
         if available.len() < words || allocated.len() < words {
             return Err(MapError::BitmapCapacity);
         }
         available[..words].fill(0);
         allocated[..words].fill(0);
-        let mut allocatable = 0u64;
-        for region in regions {
-            if region.kind != OwnershipKind::Usable {
-                continue;
-            }
-            for number in region.frames.start.number()..region.frames.end.number() {
-                set_bit(available, number, true);
-                allocatable = allocatable.checked_add(1).ok_or(MapError::BitmapCapacity)?;
-            }
+        for ordinal in 0..allocatable {
+            set_bit(available, ordinal, true);
         }
+        let reserved = regions
+            .iter()
+            .filter(|region| {
+                matches!(
+                    region.kind,
+                    OwnershipKind::KernelImage
+                        | OwnershipKind::BootInfo
+                        | OwnershipKind::UefiRuntime
+                        | OwnershipKind::AcpiReclaimable
+                        | OwnershipKind::AllocatorMetadata
+                )
+            })
+            .try_fold(0u64, |total, region| total.checked_add(region.frames.len()))
+            .ok_or(MapError::BitmapCapacity)?;
         let accounting = Accounting {
-            total_represented: highest_frame,
+            total_represented: allocatable
+                .checked_add(reserved)
+                .ok_or(MapError::BitmapCapacity)?,
             allocatable,
-            reserved: highest_frame - allocatable,
+            reserved,
             allocated: 0,
             free: allocatable,
         };
         Ok(Self {
+            regions,
             available: &mut available[..words],
             allocated: &mut allocated[..words],
-            highest_frame,
+            managed_frames: allocatable,
             accounting,
         })
     }
@@ -339,31 +352,34 @@ impl<'a> BitmapAllocator<'a> {
                 continue;
             }
             let bit = free.trailing_zeros() as u64;
-            let frame = word_index as u64 * 64 + bit;
-            if frame >= self.highest_frame {
+            let ordinal = word_index as u64 * 64 + bit;
+            if ordinal >= self.managed_frames {
                 return None;
             }
             *allocated |= 1u64 << bit;
             self.accounting.allocated += 1;
             self.accounting.free -= 1;
-            return Some(PhysicalFrame::from_number(frame));
+            return self.ordinal_to_frame(ordinal);
         }
         None
     }
 
     /// Releases an allocated frame, rejecting invalid state transitions.
     pub fn free(&mut self, frame: PhysicalFrame) -> Result<(), FreeError> {
-        let number = frame.number();
-        if number >= self.highest_frame {
+        let Some(ordinal) = self.frame_to_ordinal(frame) else {
+            if self
+                .regions
+                .iter()
+                .any(|region| region.frames.contains(frame))
+            {
+                return Err(FreeError::Reserved);
+            }
             return Err(FreeError::OutsideDomain);
-        }
-        if !get_bit(self.available, number) {
-            return Err(FreeError::Reserved);
-        }
-        if !get_bit(self.allocated, number) {
+        };
+        if !get_bit(self.allocated, ordinal) {
             return Err(FreeError::NotAllocated);
         }
-        set_bit(self.allocated, number, false);
+        set_bit(self.allocated, ordinal, false);
         self.accounting.allocated -= 1;
         self.accounting.free += 1;
         Ok(())
@@ -378,7 +394,38 @@ impl<'a> BitmapAllocator<'a> {
     /// Returns whether a frame is permanently reserved.
     #[must_use]
     pub fn is_reserved(&self, frame: PhysicalFrame) -> bool {
-        frame.number() >= self.highest_frame || !get_bit(self.available, frame.number())
+        self.frame_to_ordinal(frame).is_none()
+    }
+
+    fn ordinal_to_frame(&self, mut ordinal: u64) -> Option<PhysicalFrame> {
+        for region in self
+            .regions
+            .iter()
+            .filter(|region| region.kind == OwnershipKind::Usable)
+        {
+            if ordinal < region.frames.len() {
+                return Some(PhysicalFrame::from_number(
+                    region.frames.start.number() + ordinal,
+                ));
+            }
+            ordinal -= region.frames.len();
+        }
+        None
+    }
+
+    fn frame_to_ordinal(&self, frame: PhysicalFrame) -> Option<u64> {
+        let mut base = 0u64;
+        for region in self
+            .regions
+            .iter()
+            .filter(|region| region.kind == OwnershipKind::Usable)
+        {
+            if region.frames.contains(frame) {
+                return Some(base + frame.number() - region.frames.start.number());
+            }
+            base += region.frames.len();
+        }
+        None
     }
 }
 
@@ -621,9 +668,9 @@ mod tests {
         assert_eq!(
             allocator.accounting(),
             Accounting {
-                total_represented: 4,
+                total_represented: 3,
                 allocatable: 2,
-                reserved: 2,
+                reserved: 1,
                 allocated: 0,
                 free: 2
             }
@@ -697,6 +744,43 @@ mod tests {
         assert_eq!(allocator.accounting().total_represented, 256);
         assert_eq!(allocator.accounting().allocatable, 256);
         assert_eq!(allocator.accounting().reserved, 0);
+    }
+
+    #[test]
+    fn sparse_ram_uses_compact_ordinals_and_preserves_physical_order() {
+        let regions = [
+            CanonicalRegion {
+                frames: FrameRange::new(
+                    PhysicalFrame::from_number(1),
+                    PhysicalFrame::from_number(3),
+                )
+                .unwrap(),
+                kind: OwnershipKind::Usable,
+            },
+            CanonicalRegion {
+                frames: FrameRange::new(
+                    PhysicalFrame::from_number(1 << 28),
+                    PhysicalFrame::from_number((1 << 28) + 2),
+                )
+                .unwrap(),
+                kind: OwnershipKind::Usable,
+            },
+        ];
+        let mut available = [0u64; 1];
+        let mut allocated = [0u64; 1];
+        let mut allocator = BitmapAllocator::new(&regions, &mut available, &mut allocated).unwrap();
+        assert_eq!(allocator.accounting().allocatable, 4);
+        assert_eq!(allocator.allocate(), Some(PhysicalFrame::from_number(1)));
+        assert_eq!(allocator.allocate(), Some(PhysicalFrame::from_number(2)));
+        assert_eq!(
+            allocator.allocate(),
+            Some(PhysicalFrame::from_number(1 << 28))
+        );
+        assert_eq!(
+            allocator.allocate(),
+            Some(PhysicalFrame::from_number((1 << 28) + 1))
+        );
+        assert!(allocator.allocate().is_none());
     }
 
     #[test]

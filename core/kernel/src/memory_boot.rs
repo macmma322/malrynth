@@ -133,13 +133,12 @@ pub(crate) fn initialize(info: &BootInfo) -> Result<BitmapAllocator<'static>, Bo
 
     let (endpoints, canonical) = early_buffers();
     let mut canonical_count = canonicalize(&raw[..raw_count], endpoints, canonical)?;
-    let highest_frame = canonical[..canonical_count]
+    let managed_frames = canonical[..canonical_count]
         .iter()
         .filter(|region| region.kind == OwnershipKind::Usable)
-        .map(|region| region.frames.end.number())
-        .max()
+        .try_fold(0u64, |total, region| total.checked_add(region.frames.len()))
         .ok_or(MapError::NoUsableMemory)?;
-    let metadata_frames = metadata_frames_required(highest_frame)?;
+    let metadata_frames = metadata_frames_required(managed_frames)?;
     let metadata = select_metadata_range(&canonical[..canonical_count], metadata_frames)?;
     let metadata_start = metadata
         .start
@@ -158,7 +157,12 @@ pub(crate) fn initialize(info: &BootInfo) -> Result<BitmapAllocator<'static>, Bo
     raw_count += 1;
     canonical_count = canonicalize(&raw[..raw_count], endpoints, canonical)?;
 
-    let words_u64 = highest_frame.div_ceil(64);
+    let final_managed_frames = canonical[..canonical_count]
+        .iter()
+        .filter(|region| region.kind == OwnershipKind::Usable)
+        .try_fold(0u64, |total, region| total.checked_add(region.frames.len()))
+        .ok_or(MapError::NoUsableMemory)?;
+    let words_u64 = final_managed_frames.div_ceil(64);
     let words = usize::try_from(words_u64).map_err(|_| BootMemoryError::MetadataWordOverflow)?;
     let one_bitmap_bytes = words
         .checked_mul(size_of::<u64>())

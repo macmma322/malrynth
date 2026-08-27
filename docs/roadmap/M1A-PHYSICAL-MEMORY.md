@@ -61,7 +61,8 @@ costs are:
 
 Canonicalization sorts at most 520 endpoints and performs a bounded interval/descriptor
 sweep (`O(n log n + n^2)` with `n <= 260`). Bitmap initialization is linear in usable
-frames, allocation is a deterministic lowest-free linear word scan, and free is `O(1)`.
+frames. Allocation is a deterministic lowest-free linear word scan followed by a bounded
+usable-range lookup; free performs the same bounded range lookup and then an `O(1)` bit update.
 
 The existing fixed kernel placement near 256 MiB makes a 128 MiB guest unsupported. M1A
 does not move the kernel merely to satisfy that matrix; relocation/page-table ownership is
