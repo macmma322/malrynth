@@ -45,6 +45,12 @@ reader can act on it) · **AUTHORITATIVE** (reviewed, versioned, maintained)
 Owners are **roles, not people** — there is currently one person. The roles exist so
 responsibility is assignable when there are more.
 
+## Developer entry points
+
+- Native Windows: `python tools/windows/malrynth.py <doctor|build|test|verify|panic>`; see
+  [`operations/DEVELOPMENT-ENVIRONMENT.md`](operations/DEVELOPMENT-ENVIRONMENT.md).
+- Linux reference: `./tools/<doctor|build|test|run-qemu>`; see the same environment document.
+
 ## Rules
 
 1. **Every document declares a status** — LOCKED / ACCEPTED / PROPOSED / EXPERIMENTAL /

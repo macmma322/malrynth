@@ -27,6 +27,26 @@ from malrynth_tooling.config import MalrynthConfig
 REMAP_PREFIX = "--remap-path-prefix="
 
 
+def find_contract_bash() -> str | None:
+    """Find a Bash that can source this Windows checkout.
+
+    On Windows, ``bash.exe`` earlier on PATH may be the WSL launcher. It cannot use the
+    native process working directory passed by ``subprocess`` and exits before running the
+    command. Prefer the Git-for-Windows Bash paired with the active ``git`` executable.
+    """
+    if sys.platform == "win32":
+        try:
+            git_exec_path = subprocess.run(
+                ["git", "--exec-path"], capture_output=True, text=True, check=True
+            ).stdout.strip()
+            candidate = Path(git_exec_path).parents[2] / "bin" / "bash.exe"
+            if candidate.is_file():
+                return str(candidate)
+        except (FileNotFoundError, subprocess.CalledProcessError, IndexError):
+            pass
+    return shutil.which("bash")
+
+
 def contract_switches(tokens: list[str]) -> list[str]:
     """Return the leading non-remap switches.
 
@@ -45,7 +65,7 @@ def contract_switches(tokens: list[str]) -> list[str]:
 class TestFlagContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.bash = shutil.which("bash")
+        cls.bash = find_contract_bash()
 
     def _shell_flags(self, name: str) -> list[str]:
         if not self.bash:

@@ -56,6 +56,16 @@ capabilities, IPC, drivers, filesystems, networking, graphics, and every applica
 
 ## Quick start
 
+Native Windows (canonical/current development path):
+
+```powershell
+python tools/windows/malrynth.py doctor
+python tools/windows/malrynth.py build
+python tools/windows/malrynth.py test --boots 3
+```
+
+Linux reference path:
+
 ```bash
 ./tools/bootstrap   # user-local rustup toolchain + targets, and git hooks
 ./tools/doctor      # read-only: report what is present and what is missing
@@ -104,6 +114,7 @@ criteria for when a component earns its own repository — is in
 | What is actually secure today | [Threat Model](docs/security/THREAT-MODEL.md) |
 | What happens next | [Roadmap](docs/roadmap/README.md) · [Master roadmap](docs/roadmap/MASTER-ROADMAP.md) |
 | How M0 works | [M0](docs/roadmap/M0.md) |
+| How to build and test on Windows | [Development environment](docs/operations/DEVELOPMENT-ENVIRONMENT.md) |
 | **How the whole platform fits together** | [Platform layers](docs/architecture/PLATFORM-LAYERS.md) |
 | **Where any component belongs** | [Platform capability map](docs/architecture/PLATFORM-CAPABILITY-MAP.md) |
 | **What must exist before X** | [Dependency graph](docs/architecture/DEPENDENCY-GRAPH.md) |

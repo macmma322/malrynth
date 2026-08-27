@@ -1,14 +1,39 @@
 # Development Environment
 
-**Status:** LOCKED for the current host. Re-verify with `tools/doctor` on any new machine.
+**Status:** LOCKED for the current development model. Re-verify with the platform doctor on
+any new machine.
 
-## Reference host (verified 2026-08-19)
+## Canonical development environment
+
+Native Windows is the canonical/current development environment. The supported entry point is:
+
+```powershell
+python tools/windows/malrynth.py doctor
+python tools/windows/malrynth.py build
+python tools/windows/malrynth.py test --boots 3
+```
+
+The repository and build outputs remain path-independent: a particular drive letter, user
+profile, worktree name, Cargo home, or rustup home is never part of the compiler/linker
+contract. QEMU and a matching OVMF code/variables pair are required for boot validation;
+the pinned Rust toolchain and targets are defined by the repository. The Windows tooling
+discovers host installations and reports missing dependencies rather than installing them.
+
+Git Bash remains necessary for the repository secret scanner and Git hooks. It is not the
+build-system authority: native Windows build, test, artifact verification, panic validation,
+and reproducibility are owned by `tools/windows/malrynth.py` and its package.
+
+## Linux reference environment (historically validated 2026-08-19)
+
+Linux remains a supported reference and historical validation environment. Its tools are
+valuable for cross-platform contract validation, but the host below is no longer described
+as the current canonical machine.
 
 | | |
 |---|---|
 | OS | Ubuntu 26.04 LTS, Linux 7.0.0-29-generic |
 | Architecture | x86_64, 12 CPUs |
-| Repository root | `/media/Data/Malrynth` |
+| Historical repository root | `/media/Data/Malrynth` |
 | Rust | 1.97.1 (pinned via `rust-toolchain.toml`) |
 | QEMU | 10.2.1 |
 | OVMF | 2025.11 (`/usr/share/OVMF/OVMF_CODE_4M.fd`, `OVMF_VARS_4M.fd`) |
@@ -68,12 +93,10 @@ export CARGO_TARGET_DIR="$HOME/.cache/malrynth-target"
 FUSE/NTFS root. It is **not** set in `.cargo/config.toml`, because a committed absolute path
 would break every other machine.
 
-### If the volume is ever mounted on Windows
+These NTFS/FUSE rules describe that Linux reference mount only. They do not prohibit a native
+Windows checkout; Windows repository hygiene is validated by the native tooling and CI.
 
-Mode bits and symlinks will not survive. Treat a Windows-side checkout as read-only, or clone
-to an NTFS-independent path.
-
-## Quick start
+## Linux reference quick start
 
 ```bash
 git clone https://github.com/macmma322/malrynth.git

@@ -37,7 +37,7 @@ name: Windows native M0
 # must be kept identical.
 on:
   push:
-    branches: [main, ci/windows-native-m0-hardened]
+    branches: [main]
     paths:
       - '.github/workflows/windows-native-m0.yml'
       - '.cargo/**'
