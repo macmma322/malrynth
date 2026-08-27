@@ -41,6 +41,8 @@ jobs:
       - name: Checkout
         # actions/checkout v7.0.1
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
 
       # The toolchain and targets come from rust-toolchain.toml, which rustup honours
       # automatically. No third-party toolchain action is used: it would be one more
