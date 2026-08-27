@@ -149,10 +149,27 @@ pub unsafe extern "sysv64" fn _start(boot_info: *const BootInfo) -> ! {
 }
 
 /// Reports the normalised memory map handed over by the loader.
+///
+/// An absent or empty map is **fatal**, not a warning. The loader refuses to hand over a map
+/// it could not transfer in full, so reaching here without one means the handoff is not what
+/// the kernel was built to consume. Continuing would print the success marker and declare a
+/// boot correct while the kernel had no idea what physical memory exists — and M1's frame
+/// allocator is built directly on this map, so a kernel that tolerates its absence now is a
+/// kernel that allocates from firmware memory later.
 fn report_memory_map(info: &BootInfo) {
     if info.regions_len == 0 {
-        println!("memory map MISSING");
-        return;
+        println!("FATAL: memory map MISSING (loader handed over no regions)");
+        println!("{BOOT_FAIL_MARKER}");
+        halt_forever();
+    }
+
+    if info.usable_bytes == 0 {
+        println!(
+            "FATAL: memory map reports {} regions but no usable memory",
+            info.regions_len
+        );
+        println!("{BOOT_FAIL_MARKER}");
+        halt_forever();
     }
 
     println!(
