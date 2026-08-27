@@ -25,11 +25,12 @@
 
 mod arch;
 mod debug;
+mod memory_boot;
 mod serial;
 
 use arch::x86_64::halt_forever;
 use core::panic::PanicInfo;
-use malrynth_abi::{BootInfo, KERNEL_PHYS_BASE, MemoryKind, PixelFormat};
+use malrynth_abi::{BootInfo, KERNEL_PHYS_BASE, PixelFormat};
 
 /// Kernel version, sourced from the crate manifest so it cannot drift from Cargo.
 const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), "-dev");
@@ -117,7 +118,14 @@ pub unsafe extern "sysv64" fn _start(boot_info: *const BootInfo) -> ! {
         halt_forever();
     }
 
-    report_memory_map(info);
+    let _physical_allocator = match memory_boot::initialize(info) {
+        Ok(allocator) => allocator,
+        Err(error) => {
+            println!("FATAL: physical-memory initialization rejected: {error}");
+            println!("{BOOT_FAIL_MARKER}");
+            halt_forever();
+        }
+    };
     report_framebuffer(info);
 
     // The loader calls ExitBootServices before entering the kernel, so reaching this point
@@ -145,71 +153,6 @@ pub unsafe extern "sysv64" fn _start(boot_info: *const BootInfo) -> ! {
         println!();
         println!("{BOOT_OK_MARKER}");
         halt_forever();
-    }
-}
-
-/// Reports the normalised memory map handed over by the loader.
-///
-/// An absent or empty map is **fatal**, not a warning. The loader refuses to hand over a map
-/// it could not transfer in full, so reaching here without one means the handoff is not what
-/// the kernel was built to consume. Continuing would print the success marker and declare a
-/// boot correct while the kernel had no idea what physical memory exists — and M1's frame
-/// allocator is built directly on this map, so a kernel that tolerates its absence now is a
-/// kernel that allocates from firmware memory later.
-fn report_memory_map(info: &BootInfo) {
-    if info.regions_len == 0 {
-        println!("FATAL: memory map MISSING (loader handed over no regions)");
-        println!("{BOOT_FAIL_MARKER}");
-        halt_forever();
-    }
-
-    if info.usable_bytes == 0 {
-        println!(
-            "FATAL: memory map reports {} regions but no usable memory",
-            info.regions_len
-        );
-        println!("{BOOT_FAIL_MARKER}");
-        halt_forever();
-    }
-
-    println!(
-        "memory map received ({} regions, {} MiB usable)",
-        info.regions_len,
-        info.usable_bytes / (1024 * 1024)
-    );
-
-    // SAFETY: the loader guarantees `regions_phys` points to `regions_len` initialised
-    // `MemoryRegion` values in BootInfo-typed memory, which survives ExitBootServices and
-    // is identity-mapped. The count is bounded by the loader's own allocation.
-    let regions = unsafe {
-        core::slice::from_raw_parts(
-            info.regions_phys as *const malrynth_abi::MemoryRegion,
-            info.regions_len as usize,
-        )
-    };
-
-    let mut usable = 0usize;
-    let mut reserved = 0usize;
-    for region in regions {
-        match region.kind {
-            MemoryKind::Usable => usable += 1,
-            _ => reserved += 1,
-        }
-    }
-    println!("  usable regions: {usable}, non-usable regions: {reserved}");
-
-    // Largest usable region: the first thing M1's physical allocator will want.
-    if let Some(largest) = regions
-        .iter()
-        .filter(|r| r.kind == MemoryKind::Usable)
-        .max_by_key(|r| r.len)
-    {
-        println!(
-            "  largest usable: {:#018x}..{:#018x} ({} MiB)",
-            largest.start_phys,
-            largest.end_phys(),
-            largest.len / (1024 * 1024)
-        );
     }
 }
 

@@ -54,6 +54,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         timeout=args.timeout,
         interactive=args.interactive,
         quiet=args.quiet,
+        memory_mib=args.memory_mib,
     )
     return 0 if result.is_success else 1
 
@@ -140,6 +141,7 @@ def cmd_test(args: argparse.Namespace) -> int:
     # 6. Unit tests
     step("unit tests (abi)", ["cargo", "test", "-p", "malrynth-abi"])
     step("unit tests (loader memory map)", ["cargo", "test", "-p", "malboot", "--lib"])
+    step("unit tests (kernel memory)", ["cargo", "test", "-p", "malrynth-kernel", "--lib"])
 
     # 7. Build
     print(format_info("build"))
@@ -198,6 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     # run
     p_run = subparsers.add_parser("run", help="Boot Malrynth image under supervised QEMU")
     p_run.add_argument("--timeout", type=float, default=60.0, help="Boot timeout in seconds (default 60)")
+    p_run.add_argument("--memory-mib", type=int, default=1024, help="Guest RAM in MiB")
     p_run.add_argument("--interactive", action="store_true", help="Run QEMU interactively in console")
     p_run.add_argument("--quiet", action="store_true", help="Suppress serial output dump")
     p_run.set_defaults(func=cmd_run)
