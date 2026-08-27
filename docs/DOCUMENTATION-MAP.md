@@ -39,6 +39,8 @@ reader can act on it) · **AUTHORITATIVE** (reviewed, versioned, maintained)
 | **Licensing** | `docs/legal/` | Legal | DRAFT (unresolved) |
 | **Third-party notices** | `THIRD_PARTY.md` | Legal | USABLE |
 | **Operations** | `docs/operations/` | Engineering | USABLE |
+| **Development environment** | `docs/operations/DEVELOPMENT-ENVIRONMENT.md` | Engineering | USABLE |
+| **Developer tooling (host)** | `docs/operations/DEVELOPMENT-ENVIRONMENT.md`, `tools/`, `tools/windows/` | Engineering | USABLE |
 | **Roadmap** | `docs/roadmap/` | Product | USABLE |
 | **Research** | `docs/research/` | Architecture | USABLE |
 
@@ -55,6 +57,10 @@ responsibility is assignable when there are more.
 4. **Documentation ships offline.** Documentation that requires the Internet fails exactly when
    a user needs it most — during recovery.
 5. **An undocumented interface is unfinished**, not "self-documenting".
+6. **Production developer tooling is documented under `docs/operations/`**, never only under
+   `docs/research/`. Research records how a decision was reached; operations records how to use
+   what it produced. A developer must not have to read a research paper to find the build
+   command.
 
 ## Known gaps
 

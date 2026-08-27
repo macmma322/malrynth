@@ -141,6 +141,18 @@ def cmd_test(args: argparse.Namespace) -> int:
     step("unit tests (abi)", ["cargo", "test", "-p", "malrynth-abi"])
     step("unit tests (loader memory map)", ["cargo", "test", "-p", "malboot", "--lib"])
 
+    # The Windows tooling suite covers the boot classifier, the panic artifact binding,
+    # the flag contract and the CI contract. It ran only in CI until now, which made CI
+    # able to fail on something no local command checked -- the CI-only magic ADR-0001
+    # forbids.
+    step(
+        "unit tests (windows tooling)",
+        [
+            sys.executable, "-m", "unittest", "discover",
+            "-s", "tests/windows-tooling", "-p", "test_*.py",
+        ],
+    )
+
     # 7. Build
     print(format_info("build"))
     if build_image() == 0:

@@ -56,6 +56,21 @@ capabilities, IPC, drivers, filesystems, networking, graphics, and every applica
 
 ## Quick start
 
+Malrynth has two validated development environments. Native Windows is the canonical one;
+Linux is the reference one. Both are described in
+[Development Environment](docs/operations/DEVELOPMENT-ENVIRONMENT.md).
+
+**Native Windows** — no WSL2 required. Needs Python 3.10+:
+
+```powershell
+python tools\windows\malrynth.py doctor   # read-only: report what is present and missing
+python tools\windows\malrynth.py build    # build loader + kernel, assemble the ESP
+python tools\windows\malrynth.py test     # fmt, clippy, unit tests, build, boot, panic path
+python tools\windows\malrynth.py run      # boot it under supervised QEMU
+```
+
+**Linux:**
+
 ```bash
 ./tools/bootstrap   # user-local rustup toolchain + targets, and git hooks
 ./tools/doctor      # read-only: report what is present and what is missing
@@ -70,7 +85,7 @@ Watch it boot:
 ```
 
 Requirements: Rust (via rustup — the version is pinned), QEMU, and OVMF. No `clang`, `lld`,
-`cmake` or `ninja` is needed; the Rust toolchain ships its own linker. `tools/doctor` reports
+`cmake` or `ninja` is needed; the Rust toolchain ships its own linker. Either doctor reports
 anything missing and how to get it, and never installs anything itself.
 
 ## Repository layout
@@ -81,7 +96,9 @@ docs/       constitution, architecture, ADRs, research, roadmap,
 manifests/  component inventory, product compositions, release records
 tools/      bootstrap doctor build test run-qemu status
             symbolize check-panic-path check-reproducible scan-secrets + git hooks
+tools/windows/  native Windows developer CLI (malrynth.py), no WSL2 required
 core/       abi/  boot/uefi/ (malboot)  kernel/
+tests/windows-tooling/  test suite for the native Windows CLI
 ```
 
 If the kernel panics, it prints a validated frame-pointer backtrace; resolve it with:
@@ -104,6 +121,7 @@ criteria for when a component earns its own repository — is in
 | What is actually secure today | [Threat Model](docs/security/THREAT-MODEL.md) |
 | What happens next | [Roadmap](docs/roadmap/README.md) · [Master roadmap](docs/roadmap/MASTER-ROADMAP.md) |
 | How M0 works | [M0](docs/roadmap/M0.md) |
+| **How to set up a machine to build it** | [Development Environment](docs/operations/DEVELOPMENT-ENVIRONMENT.md) |
 | **How the whole platform fits together** | [Platform layers](docs/architecture/PLATFORM-LAYERS.md) |
 | **Where any component belongs** | [Platform capability map](docs/architecture/PLATFORM-CAPABILITY-MAP.md) |
 | **What must exist before X** | [Dependency graph](docs/architecture/DEPENDENCY-GRAPH.md) |
