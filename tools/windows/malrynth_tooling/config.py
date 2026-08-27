@@ -1,4 +1,20 @@
-"""Configuration and path management for Malrynth Windows tooling."""
+"""Configuration and path management for Malrynth Windows tooling.
+
+THIS MODULE IS NOT THE SINGLE SOURCE OF TRUTH for the shared M0 compiler/linker
+contract. The same contract is defined a second time, for POSIX/Linux development, as
+``KERNEL_RUSTFLAGS`` / ``LOADER_RUSTFLAGS`` in ``tools/lib.sh``. Neither definition is
+authoritative over the other.
+
+Any change to :attr:`MalrynthConfig.kernel_flags_list` or
+:attr:`MalrynthConfig.loader_flags_list` MUST be mirrored in ``tools/lib.sh`` AND
+validated on both Linux and Windows before it lands. The non-remap switches must stay
+byte-identical across the two definitions; ``tests/windows-tooling/test_flag_contract.py``
+fails if they drift apart. The ``--remap-path-prefix`` flags are host-derived and are
+deliberately NOT identical: this module additionally emits forward-slash variants
+because rustc observes a mixture of separator styles on Windows.
+
+See ``.cargo/config.toml`` for the full rationale.
+"""
 
 from __future__ import annotations
 
