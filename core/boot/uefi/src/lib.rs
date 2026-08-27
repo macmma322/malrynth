@@ -163,6 +163,17 @@ mod tests {
 
     #[test]
     fn rejects_input_larger_than_handoff_capacity() {
+        let exact = [RawMemoryRegion {
+            start_phys: 0,
+            page_count: 1,
+            kind: MemoryKind::Reserved,
+        }; 256];
+        let mut exact_output = [EMPTY; 256];
+        assert_eq!(
+            normalise_memory_regions(exact, &mut exact_output, 0x1000_0000, 0x1001_0000),
+            Ok((256, 0))
+        );
+
         let input = [RawMemoryRegion {
             start_phys: 0,
             page_count: 1,
