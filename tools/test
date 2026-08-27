@@ -45,6 +45,7 @@ step "lint (kernel, panic-test)" env RUSTFLAGS="${KERNEL_RUSTFLAGS}" \
     cargo clippy -p malrynth-kernel --target "${TARGET_KERNEL}" --features panic-test -- -D warnings
 step "unit tests (abi)" cargo test -p malrynth-abi
 step "unit tests (loader memory map)" cargo test -p malboot --lib
+step "unit tests (kernel memory)" cargo test -p malrynth-kernel --lib
 step "build"            "${MALRYNTH_ROOT}/tools/build"
 
 if [[ "${SKIP_BOOT}" == "0" ]]; then

@@ -77,12 +77,15 @@ def run_qemu_boot(
     temp_root: Path | None = None,
     retain_run_dir: bool = False,
     esp_dir_override: Path | None = None,
+    memory_mib: int = 1024,
 ) -> BootRunnerResult:
     """Supervise QEMU until an exact marker, process exit, cancellation, or timeout."""
     cfg = MalrynthConfig(repo_root)
     cfg.build_dir.mkdir(parents=True, exist_ok=True)
     if timeout <= 0:
         raise ValueError("timeout must be greater than zero")
+    if memory_mib <= 0:
+        raise ValueError("memory_mib must be greater than zero")
 
     parent = str(temp_root.resolve()) if temp_root else None
     run_directory = Path(tempfile.mkdtemp(prefix="malrynth-qemu-", dir=parent))
@@ -116,7 +119,7 @@ def run_qemu_boot(
 
             vars_copy = _copy_vars_template(ovmf_vars, run_directory)
             qemu_args = [
-                str(qemu_bin), "-machine", "q35", "-m", "1024", "-cpu", "qemu64",
+                str(qemu_bin), "-machine", "q35", "-m", str(memory_mib), "-cpu", "qemu64",
                 "-drive", f"if=pflash,format=raw,readonly=on,file={ovmf_code}",
                 "-drive", f"if=pflash,format=raw,file={vars_copy}",
                 "-drive", f"format=raw,file=fat:rw:{esp_dir}",

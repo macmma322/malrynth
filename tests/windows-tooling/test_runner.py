@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 # Add tools/windows to sys.path
@@ -20,6 +21,10 @@ from malrynth_tooling.runner import _classify_output, _copy_vars_template, run_q
 
 
 class TestRunner(unittest.TestCase):
+    def test_invalid_memory_size_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            run_qemu_boot(memory_mib=0, custom_command=[sys.executable, "-c", "pass"])
+
     def test_marker_classification_requires_complete_logical_lines(self) -> None:
         self.assertEqual(_classify_output("MALRYNTH_M0_BOOT_OK\r\n"), "ok")
         self.assertEqual(_classify_output("\x1b[32mMALRYNTH_M0_BOOT_OK\x1b[0m\n"), "ok")
@@ -42,7 +47,7 @@ class TestRunner(unittest.TestCase):
                 proc.kill()
                 proc.wait()
 
-            with unittest.mock.patch(
+            with patch(
                 "malrynth_tooling.runner._terminate_process_tree", side_effect=append_failure
             ):
                 result = run_qemu_boot(
@@ -64,7 +69,7 @@ class TestRunner(unittest.TestCase):
                 proc.kill()
                 proc.wait()
 
-            with unittest.mock.patch(
+            with patch(
                 "malrynth_tooling.runner._terminate_process_tree", side_effect=append_success
             ):
                 result = run_qemu_boot(
