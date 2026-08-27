@@ -38,6 +38,7 @@ M0–M7 sit inside broader horizons H0–H11 so that post-M7 work has a home. Se
 
 ## Supporting documents
 
+- [M1 sub-stages](M1-SUBSTAGES.md) — M1A–M1F, the dependency-ordered decomposition of the next milestone
 - [Subsystem coverage](SUBSYSTEM-COVERAGE.md) — power, time, text, input, printing, accessibility and the other subsystems that decide whether an OS is trustworthy
 - [Master roadmap](MASTER-ROADMAP.md) — horizons H0–H11, dependency-gated
 - [Design now, build later](DESIGN-NOW-BUILD-LATER.md) — what is specified vs implemented, per subsystem
